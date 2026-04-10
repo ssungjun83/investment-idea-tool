@@ -1,16 +1,43 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { listIdeas } from "@/lib/db/queries";
 import IdeaCard from "@/components/IdeaCard";
-import { BookOpen, Search } from "lucide-react";
+import { BookOpen, Search, Loader2 } from "lucide-react";
+import type { IdeaListItem } from "@/types/analysis";
 
-export const dynamic = "force-dynamic";
+function IdeasContent() {
+  const searchParams = useSearchParams();
+  const q = searchParams.get("q") ?? undefined;
+  const keyword = searchParams.get("keyword") ?? undefined;
 
-interface Props {
-  searchParams: { q?: string; keyword?: string };
-}
+  const [ideas, setIdeas] = useState<IdeaListItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-async function IdeasList({ q, keyword }: { q?: string; keyword?: string }) {
-  const ideas = await listIdeas({ q, keyword, limit: 50 });
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (keyword) params.set("keyword", keyword);
+    const url = `/api/ideas${params.toString() ? `?${params}` : ""}`;
+
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        setIdeas(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [q, keyword]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   if (ideas.length === 0) {
     return (
@@ -32,23 +59,15 @@ async function IdeasList({ q, keyword }: { q?: string; keyword?: string }) {
   );
 }
 
-export default function IdeasPage({ searchParams }: Props) {
-  const { q, keyword } = searchParams;
-
+export default function IdeasPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <BookOpen className="h-6 w-6 text-blue-500" />
         <h1 className="text-2xl font-bold">아이디어 목록</h1>
-        {(q || keyword) && (
-          <span className="text-sm text-gray-500">
-            — {q ? `"${q}" 검색 결과` : `키워드: "${keyword}"`}
-          </span>
-        )}
       </div>
-
-      <Suspense fallback={<div className="text-sm text-gray-400 py-8 text-center">로딩 중...</div>}>
-        <IdeasList q={q} keyword={keyword} />
+      <Suspense>
+        <IdeasContent />
       </Suspense>
     </div>
   );
