@@ -38,12 +38,16 @@ export default function Stage3View({ companies }: { companies: Company[] }) {
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-amber-500 shrink-0" />
                     <div>
-                      <p className="font-semibold text-sm">{co.company_name}</p>
-                      {co.ticker && (
-                        <p className="text-xs text-gray-500">
-                          {co.ticker}
-                          {co.exchange && ` · ${co.exchange}`}
-                        </p>
+                      <p className="font-semibold text-sm">
+                        {co.company_name}
+                        {co.ticker && (
+                          <span className="ml-1.5 font-mono text-xs font-normal text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                            {co.ticker}
+                          </span>
+                        )}
+                      </p>
+                      {co.exchange && (
+                        <p className="text-xs text-gray-400 mt-0.5">{co.exchange}</p>
                       )}
                     </div>
                   </div>
