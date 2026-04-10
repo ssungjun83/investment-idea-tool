@@ -7,6 +7,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    // DEBUG: raw count
+    const [debugCount] = await db.select({ cnt: sql<number>`count(*)::int` }).from(stage3Companies);
+    const [debugIdeasCount] = await db.select({ cnt: sql<number>`count(*)::int` }).from(ideas);
+    console.log("[companies] DEBUG total stage3_companies:", debugCount?.cnt, "total ideas:", debugIdeasCount?.cnt);
+
     // 기업별 원시 데이터 가져오기 (아이디어 날짜 포함)
     const rows = await db
       .select({
@@ -24,7 +29,7 @@ export async function GET() {
       .from(stage3Companies)
       .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
 
-    console.log("[companies] raw rows from DB:", rows.length);
+    console.log("[companies] raw rows from DB:", rows.length, "idea_ids:", Array.from(new Set(rows.map(r => r.idea_id))));
 
     // 기업별 집계 + 투자 점수 계산
     const companyMap = new Map<string, {
