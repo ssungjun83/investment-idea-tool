@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingUp, BookOpen, Network } from "lucide-react";
+import { TrendingUp, BookOpen, Network, Building2, MessageCircle, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchBar from "./SearchBar";
 
@@ -11,37 +11,40 @@ export default function Navbar() {
 
   const links = [
     { href: "/", label: "새 아이디어", icon: TrendingUp },
-    { href: "/ideas", label: "아이디어 목록", icon: BookOpen },
-    { href: "/graph", label: "키워드 그래프", icon: Network },
+    { href: "/ideas", label: "목록", icon: BookOpen },
+    { href: "/companies", label: "기업", icon: Building2 },
+    { href: "/trends", label: "트렌드", icon: BarChart3 },
+    { href: "/graph", label: "그래프", icon: Network },
+    { href: "/chat", label: "AI 채팅", icon: MessageCircle },
   ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-blue-600">
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-blue-600 shrink-0">
           <TrendingUp className="h-5 w-5" />
-          <span>투자 아이디어</span>
+          <span className="hidden sm:inline">투자 아이디어</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 overflow-x-auto">
           {links.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
                 pathname === href
                   ? "bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
               {label}
             </Link>
           ))}
         </nav>
 
-        <div className="w-64">
+        <div className="w-48 shrink-0 hidden md:block">
           <SearchBar />
         </div>
       </div>
