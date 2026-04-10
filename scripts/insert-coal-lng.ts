@@ -68,8 +68,6 @@ LNG 가격 연동제이므로 여름·겨울 수요 증가 시 석탄도 동반 
     { name: "Peabody Energy", ticker: "BTU", exchange: "NYSE", sector: "석탄", reason: "미국 최대 석탄 생산 기업. 뉴캐슬 석탄 가격 반등 시 가장 직접적인 수혜. 열탄·원료탄 모두 생산하며 호주 광산도 보유.", benefit_type: "직접수혜", confidence: "높음" },
     { name: "Arch Resources", ticker: "ARCH", exchange: "NYSE", sector: "석탄", reason: "미국 주요 석탄 생산업체. 원료탄(metallurgical coal) 비중이 높아 철강 수요와도 연동. 석탄 가격 반등 시 수익성 급개선.", benefit_type: "직접수혜", confidence: "높음" },
     { name: "CONSOL Energy", ticker: "CEIX", exchange: "NYSE", sector: "석탄", reason: "미국 동부 석탄 생산·수출 기업. 볼티모어 항구를 통한 수출 인프라 보유. 국제 석탄 가격 상승 시 수출 마진 확대.", benefit_type: "직접수혜", confidence: "높음" },
-    { name: "Whitehaven Coal", ticker: "WHC.AX", exchange: "ASX", sector: "석탄", reason: "호주 대표 석탄 생산업체. 뉴캐슬 석탄 선물과 직접 연동. 아시아 수출 비중 높아 아태 수요 증가 시 최대 수혜.", benefit_type: "직접수혜", confidence: "높음" },
-    { name: "Glencore", ticker: "GLEN.L", exchange: "LSE", sector: "원자재 트레이딩", reason: "세계 최대 석탄 트레이더 겸 생산자. 호주·남아프리카·콜롬비아 광산 운영. 석탄 가격 상승 시 트레이딩 수익과 생산 수익 동시 증가.", benefit_type: "직접수혜", confidence: "높음" },
     // 석탄 해운 (간접 수혜)
     { name: "Star Bulk Carriers", ticker: "SBLK", exchange: "NASDAQ", sector: "벌크 해운", reason: "드라이벌크 해운 대형주. 석탄 운송 수요 증가 시 벌크선 운임 상승으로 간접 수혜. 석탄 항로 자유로움이 강점.", benefit_type: "간접수혜", confidence: "보통" },
     { name: "팬오션", ticker: "028670.KS", exchange: "KRX", sector: "벌크 해운", reason: "한국 대표 벌크 해운사. 석탄·철광석 등 벌크 화물 운송 주력. 석탄 운송량 증가 시 운임 수혜.", benefit_type: "간접수혜", confidence: "보통" },
