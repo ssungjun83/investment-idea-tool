@@ -3,6 +3,8 @@ import { listIdeas } from "@/lib/db/queries";
 import IdeaCard from "@/components/IdeaCard";
 import { BookOpen, Search } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   searchParams: { q?: string; keyword?: string };
 }

@@ -6,6 +6,8 @@ import { listIdeas } from "@/lib/db/queries";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 async function RecentIdeas() {
   try {
     const ideas = await listIdeas({ limit: 6 });
