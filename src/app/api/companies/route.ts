@@ -1,65 +1,132 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/index";
 import { stage3Companies, ideas } from "@/lib/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // 기업별 집계: 언급 횟수, 평균 확신도, 관련 아이디어
+    // 기업별 원시 데이터 가져오기 (아이디어 날짜 포함)
     const rows = await db
       .select({
         company_name: stage3Companies.company_name,
         ticker: stage3Companies.ticker,
         exchange: stage3Companies.exchange,
         sector: stage3Companies.sector,
-        mention_count: sql<number>`count(DISTINCT ${stage3Companies.idea_id})::int`,
-        avg_confidence: sql<number>`AVG(CASE ${stage3Companies.confidence} WHEN '높음' THEN 3 WHEN '보통' THEN 2 WHEN '낮음' THEN 1 END)`,
-        benefit_types: sql<string>`string_agg(DISTINCT ${stage3Companies.benefit_type}, ', ')`,
-        idea_ids: sql<number[]>`array_agg(DISTINCT ${stage3Companies.idea_id})`,
+        benefit_type: stage3Companies.benefit_type,
+        confidence: stage3Companies.confidence,
+        reason: stage3Companies.reason,
+        idea_id: stage3Companies.idea_id,
+        idea_title: ideas.title,
+        idea_date: ideas.created_at,
       })
       .from(stage3Companies)
-      .groupBy(
-        stage3Companies.company_name,
-        stage3Companies.ticker,
-        stage3Companies.exchange,
-        stage3Companies.sector
-      )
-      .orderBy(desc(sql`count(DISTINCT ${stage3Companies.idea_id})`));
+      .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
 
-    // 각 기업의 관련 아이디어 제목 가져오기
-    const result = await Promise.all(
-      rows.map(async (row) => {
-        const ideaIds = row.idea_ids ?? [];
-        const ideaTitles =
-          ideaIds.length > 0
-            ? await Promise.all(
-                ideaIds.map(async (id) => {
-                  const [idea] = await db
-                    .select({ id: ideas.id, title: ideas.title })
-                    .from(ideas)
-                    .where(eq(ideas.id, id))
-                    .limit(1);
-                  return idea ? { id: idea.id, title: idea.title } : null;
-                })
-              )
-            : [];
+    // 기업별 집계 + 투자 점수 계산
+    const companyMap = new Map<string, {
+      company_name: string;
+      ticker: string | null;
+      exchange: string | null;
+      sector: string;
+      score: number;
+      mention_count: number;
+      reasons: string[];
+      benefit_types: Set<string>;
+      confidences: string[];
+      ideas: { id: number; title: string; date: string }[];
+      latest_date: Date;
+    }>();
 
-        return {
+    const now = Date.now();
+
+    for (const row of rows) {
+      // 키: ticker 우선, 없으면 company_name
+      const key = (row.ticker ?? row.company_name).toLowerCase();
+
+      if (!companyMap.has(key)) {
+        companyMap.set(key, {
           company_name: row.company_name,
           ticker: row.ticker,
           exchange: row.exchange,
           sector: row.sector,
-          mention_count: row.mention_count,
-          avg_confidence: Math.round((row.avg_confidence ?? 0) * 10) / 10,
-          confidence_label:
-            (row.avg_confidence ?? 0) >= 2.5 ? "높음" : (row.avg_confidence ?? 0) >= 1.5 ? "보통" : "낮음",
-          benefit_types: row.benefit_types,
-          ideas: ideaTitles.filter(Boolean),
+          score: 0,
+          mention_count: 0,
+          reasons: [],
+          benefit_types: new Set(),
+          confidences: [],
+          ideas: [],
+          latest_date: new Date(0),
+        });
+      }
+
+      const co = companyMap.get(key)!;
+
+      // ── 투자 점수 계산 ──
+      // 1. 최신성: 7일=3x, 30일=2x, 이전=1x
+      const daysDiff = (now - row.idea_date.getTime()) / (1000 * 60 * 60 * 24);
+      const recencyWeight = daysDiff <= 7 ? 3 : daysDiff <= 30 ? 2 : 1;
+
+      // 2. 수혜 유형: 직접수혜(이익 직접 증가)가 가장 중요
+      const benefitWeight =
+        row.benefit_type === "직접수혜" ? 3 :
+        row.benefit_type === "간접수혜" ? 1.5 :
+        row.benefit_type === "공급망수혜" ? 1 : 0.5;
+
+      // 3. 확신도
+      const confidenceWeight =
+        row.confidence === "높음" ? 3 :
+        row.confidence === "보통" ? 1.5 :
+        row.confidence === "낮음" ? 0.5 : 1;
+
+      const mentionScore = recencyWeight * benefitWeight * confidenceWeight;
+      co.score += mentionScore;
+      co.mention_count++;
+      co.benefit_types.add(row.benefit_type);
+      co.confidences.push(row.confidence);
+
+      if (row.reason && !co.reasons.includes(row.reason)) {
+        co.reasons.push(row.reason);
+      }
+
+      // 아이디어 중복 방지
+      if (!co.ideas.find((i) => i.id === row.idea_id)) {
+        co.ideas.push({
+          id: row.idea_id,
+          title: row.idea_title,
+          date: row.idea_date.toISOString().split("T")[0],
+        });
+      }
+
+      if (row.idea_date > co.latest_date) {
+        co.latest_date = row.idea_date;
+      }
+    }
+
+    // 정렬: 투자 점수 기준 (높을수록 지금 투자해야 할 기업)
+    const result = Array.from(companyMap.values())
+      .map((co) => {
+        // 평균 확신도 계산
+        const avgConf = co.confidences.reduce((sum, c) =>
+          sum + (c === "높음" ? 3 : c === "보통" ? 2 : 1), 0) / co.confidences.length;
+
+        return {
+          company_name: co.company_name,
+          ticker: co.ticker,
+          exchange: co.exchange,
+          sector: co.sector,
+          score: Math.round(co.score * 10) / 10,
+          mention_count: co.mention_count,
+          confidence_label: avgConf >= 2.5 ? "높음" : avgConf >= 1.5 ? "보통" : "낮음",
+          benefit_types: Array.from(co.benefit_types).join(", "),
+          top_reason: co.reasons[co.reasons.length - 1] ?? "",
+          ideas: co.ideas.sort((a, b) => b.date.localeCompare(a.date)),
+          latest_date: co.latest_date.toISOString().split("T")[0],
+          days_ago: Math.floor((now - co.latest_date.getTime()) / (1000 * 60 * 60 * 24)),
         };
       })
-    );
+      .sort((a, b) => b.score - a.score);
 
     return NextResponse.json(result);
   } catch (err) {
