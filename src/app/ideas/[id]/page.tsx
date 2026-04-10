@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getIdeaById } from "@/lib/db/queries";
+import { getIdeaById, findRelatedIdeas } from "@/lib/db/queries";
 import AnalysisView from "@/components/AnalysisView";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -16,6 +16,8 @@ export default async function IdeaDetailPage({ params }: Props) {
 
   const raw = await getIdeaById(id);
   if (!raw || !raw.stage1) notFound();
+
+  const related = await findRelatedIdeas(id, 5);
 
   const data: IdeaDetail = {
     idea: {
@@ -48,7 +50,7 @@ export default async function IdeaDetailPage({ params }: Props) {
           목록으로
         </Button>
       </Link>
-      <AnalysisView data={data} />
+      <AnalysisView data={data} related={related} />
     </div>
   );
 }

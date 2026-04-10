@@ -43,6 +43,14 @@ export interface IdeaDetail {
   keywords: { id: number; name: string; category: string }[];
 }
 
+export interface RelatedIdea {
+  id: number;
+  title: string;
+  created_at: string;
+  overlap: number;
+  shared_keywords: string[];
+}
+
 export interface IdeaListItem {
   id: number;
   title: string;

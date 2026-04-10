@@ -241,6 +241,84 @@ export async function listIdeas(opts: {
   return result;
 }
 
+// ─── All Keyword Names (for AI context) ───────────────────────────────────────
+
+export async function getAllKeywordNames(): Promise<string[]> {
+  const rows = await db
+    .select({ name: keywords.name })
+    .from(keywords)
+    .orderBy(keywords.name)
+    .limit(200);
+  return rows.map((r) => r.name);
+}
+
+// ─── Find Related Ideas (by keyword overlap) ─────────────────────────────────
+
+export async function findRelatedIdeas(ideaId: number, limit = 5) {
+  // Get this idea's keywords
+  const myKws = await db
+    .select({ keyword_id: ideaKeywords.keyword_id })
+    .from(ideaKeywords)
+    .where(eq(ideaKeywords.idea_id, ideaId));
+
+  if (myKws.length === 0) return [];
+
+  const myKwIds = myKws.map((r) => r.keyword_id);
+
+  // Find other ideas sharing these keywords, ranked by overlap count
+  const related = await db
+    .select({
+      idea_id: ideaKeywords.idea_id,
+      overlap: sql<number>`count(*)::int`,
+    })
+    .from(ideaKeywords)
+    .where(
+      and(
+        inArray(ideaKeywords.keyword_id, myKwIds),
+        sql`${ideaKeywords.idea_id} != ${ideaId}`
+      )
+    )
+    .groupBy(ideaKeywords.idea_id)
+    .orderBy(sql`count(*) DESC`)
+    .limit(limit);
+
+  if (related.length === 0) return [];
+
+  const relatedIds = related.map((r) => r.idea_id);
+  const overlapMap = new Map(related.map((r) => [r.idea_id, r.overlap]));
+
+  const relatedIdeas = await db
+    .select()
+    .from(ideas)
+    .where(inArray(ideas.id, relatedIds));
+
+  // Attach overlap count and shared keywords
+  const result = await Promise.all(
+    relatedIdeas.map(async (idea) => {
+      const sharedKws = await db
+        .select({ name: keywords.name })
+        .from(keywords)
+        .innerJoin(ideaKeywords, eq(ideaKeywords.keyword_id, keywords.id))
+        .where(
+          and(
+            eq(ideaKeywords.idea_id, idea.id),
+            inArray(ideaKeywords.keyword_id, myKwIds)
+          )
+        );
+
+      return {
+        id: idea.id,
+        title: idea.title,
+        created_at: idea.created_at.toISOString(),
+        overlap: overlapMap.get(idea.id) ?? 0,
+        shared_keywords: sharedKws.map((k) => k.name),
+      };
+    })
+  );
+
+  return result.sort((a, b) => b.overlap - a.overlap);
+}
+
 // ─── Keyword Search ───────────────────────────────────────────────────────────
 
 export async function searchKeywords(prefix: string, limit = 10) {

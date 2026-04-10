@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
   ANALYSIS_SYSTEM_PROMPT,
-  KEYWORD_EXTRACTION_PROMPT,
   buildAnalysisUserPrompt,
+  buildKeywordExtractionPrompt,
   buildKeywordUserPrompt,
 } from "./prompts";
 
@@ -15,34 +15,37 @@ function getClient() {
 }
 
 interface ImageInput {
-  data: string;       // base64
-  media_type: string; // image/png, image/jpeg, image/gif, image/webp
+  data: string;
+  media_type: string;
 }
 
 export async function streamAnalysis(
   rawInput: string,
   onDelta: (text: string) => void,
-  image?: ImageInput
+  image?: ImageInput,
+  existingContext?: string
 ): Promise<string> {
   const client = getClient();
 
-  // 이미지가 있으면 멀티모달 메시지 구성
+  const textPrompt = buildAnalysisUserPrompt(rawInput, existingContext);
+
   const userContent: Anthropic.MessageParam["content"] = image
     ? [
         {
           type: "image",
           source: {
             type: "base64",
-            media_type: image.media_type as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            media_type: image.media_type as
+              | "image/jpeg"
+              | "image/png"
+              | "image/gif"
+              | "image/webp",
             data: image.data,
           },
         },
-        {
-          type: "text",
-          text: buildAnalysisUserPrompt(rawInput),
-        },
+        { type: "text", text: textPrompt },
       ]
-    : buildAnalysisUserPrompt(rawInput);
+    : textPrompt;
 
   const stream = await client.messages.stream({
     model: "claude-sonnet-4-6",
@@ -66,13 +69,14 @@ export async function streamAnalysis(
 }
 
 export async function extractKeywords(
-  analysisJson: string
+  analysisJson: string,
+  existingKeywords: string[]
 ): Promise<{ name: string; category: string }[]> {
   const client = getClient();
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
-    system: KEYWORD_EXTRACTION_PROMPT,
+    system: buildKeywordExtractionPrompt(existingKeywords),
     messages: [
       { role: "user", content: buildKeywordUserPrompt(analysisJson) },
     ],
@@ -84,7 +88,6 @@ export async function extractKeywords(
   try {
     return JSON.parse(text);
   } catch {
-    // Try to extract JSON array from response
     const match = text.match(/\[[\s\S]*\]/);
     if (match) return JSON.parse(match[0]);
     return [];

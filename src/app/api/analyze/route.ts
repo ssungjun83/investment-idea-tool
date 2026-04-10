@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { streamAnalysis, extractKeywords } from "@/lib/ai/client";
 import { parseAnalysisResponse } from "@/lib/ai/parser";
-import { saveAnalysis, saveKeywords } from "@/lib/db/queries";
+import { saveAnalysis, saveKeywords, getAllKeywordNames } from "@/lib/db/queries";
 
 export const maxDuration = 60;
 
@@ -26,7 +26,20 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        // Stage 1: Stream Claude analysis (이미지가 있으면 비전 모드)
+        // 기존 키워드 목록 가져오기 (AI에게 맥락 전달)
+        let existingKeywords: string[] = [];
+        try {
+          existingKeywords = await getAllKeywordNames();
+        } catch {
+          // DB 연결 실패해도 분석은 계속 진행
+        }
+
+        const existingContext =
+          existingKeywords.length > 0
+            ? existingKeywords.join(", ")
+            : undefined;
+
+        // Stage 1: Stream Claude analysis (기존 키워드 맥락 포함)
         send({ type: "status", stage: 1, message: "투자 아이디어 분석 중..." });
         let accumulated = "";
         await streamAnalysis(
@@ -35,7 +48,8 @@ export async function POST(req: NextRequest) {
             accumulated += delta;
             send({ type: "delta", text: delta });
           },
-          image ?? undefined
+          image ?? undefined,
+          existingContext
         );
 
         // Stage 2: Parse
@@ -43,12 +57,12 @@ export async function POST(req: NextRequest) {
         const analysis = parseAnalysisResponse(accumulated);
 
         // Stage 3: Save to DB
-        send({ type: "status", stage: 3, message: "수혜 기업 저장 중..." });
+        send({ type: "status", stage: 3, message: "데이터 저장 및 키워드 연결 중..." });
         const inputText = raw_input || "[이미지 분석]";
         const ideaId = await saveAnalysis(inputText, analysis);
 
-        // Extract and save keywords
-        const kwList = await extractKeywords(accumulated);
+        // 키워드 추출 (기존 키워드 목록 전달하여 재사용 유도)
+        const kwList = await extractKeywords(accumulated, existingKeywords);
         await saveKeywords(ideaId, kwList);
 
         send({ type: "done", idea_id: ideaId });
