@@ -13,10 +13,12 @@ interface Company {
   confidence: string;
 }
 
-const benefitTypeVariants: Record<string, "blue" | "green" | "amber"> = {
+const benefitTypeVariants: Record<string, "blue" | "green" | "amber" | "red"> = {
   직접수혜: "blue",
   간접수혜: "green",
   공급망수혜: "amber",
+  직접피해: "red",
+  간접피해: "red",
 };
 
 const confidenceConfig = {

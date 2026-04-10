@@ -54,6 +54,7 @@ function getSectorColor(sector: string) {
 
 function ScoreBadge({ score, globalRank }: { score: number; globalRank: number }) {
   const color =
+    score < 0 ? "bg-red-100 text-red-600 border border-red-200" :
     globalRank <= 3 ? "bg-red-500 text-white" :
     globalRank <= 6 ? "bg-orange-500 text-white" :
     "bg-gray-200 text-gray-600";
@@ -61,7 +62,7 @@ function ScoreBadge({ score, globalRank }: { score: number; globalRank: number }
   return (
     <div className="text-center">
       <div className={`text-xs font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${color}`}>
-        {globalRank <= 3 && <Flame className="h-3 w-3" />}
+        {score >= 0 && globalRank <= 3 && <Flame className="h-3 w-3" />}
         {score}점
       </div>
     </div>
@@ -213,7 +214,12 @@ export default function CompaniesPage() {
                                   {co.benefit_types.split(", ").map((bt) => (
                                     <Badge
                                       key={bt}
-                                      variant={bt === "직접수혜" ? "blue" : bt === "간접수혜" ? "green" : "gray"}
+                                      variant={
+                                        bt === "직접수혜" ? "blue" :
+                                        bt === "간접수혜" ? "green" :
+                                        bt === "직접피해" || bt === "간접피해" ? "red" :
+                                        "gray"
+                                      }
                                       className="text-xs"
                                     >
                                       {bt}

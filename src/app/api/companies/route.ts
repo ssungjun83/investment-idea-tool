@@ -68,11 +68,13 @@ export async function GET() {
       const daysDiff = (now - row.idea_date.getTime()) / (1000 * 60 * 60 * 24);
       const recencyWeight = daysDiff <= 7 ? 3 : daysDiff <= 30 ? 2 : 1;
 
-      // 2. 수혜 유형: 직접수혜(이익 직접 증가)가 가장 중요
+      // 2. 수혜 유형: 수혜는 +, 피해는 -
       const benefitWeight =
         row.benefit_type === "직접수혜" ? 3 :
         row.benefit_type === "간접수혜" ? 1.5 :
-        row.benefit_type === "공급망수혜" ? 1 : 0.5;
+        row.benefit_type === "공급망수혜" ? 1 :
+        row.benefit_type === "직접피해" ? -3 :
+        row.benefit_type === "간접피해" ? -1.5 : 0.5;
 
       // 3. 확신도
       const confidenceWeight =
