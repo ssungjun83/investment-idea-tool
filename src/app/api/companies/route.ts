@@ -24,6 +24,8 @@ export async function GET() {
       .from(stage3Companies)
       .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
 
+    console.log("[companies] raw rows from DB:", rows.length);
+
     // 기업별 집계 + 투자 점수 계산
     const companyMap = new Map<string, {
       company_name: string;
@@ -128,6 +130,7 @@ export async function GET() {
       })
       .sort((a, b) => b.score - a.score);
 
+    console.log("[companies] final result count:", result.length);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[companies] error:", err);
