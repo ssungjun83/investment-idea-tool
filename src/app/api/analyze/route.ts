@@ -1,10 +1,9 @@
 import { NextRequest } from "next/server";
-import { streamAnalysis, extractKeywords } from "@/lib/ai/client";
-import { parseAnalysisResponse } from "@/lib/ai/parser";
-import { saveAnalysis, saveKeywords, getAllKeywordNames } from "@/lib/db/queries";
+import { streamAnalysis } from "@/lib/ai/client";
+import { getAllKeywordNames } from "@/lib/db/queries";
 
-export const maxDuration = 300; // Vercel Pro: 5분, Free: 10초 제한
-export const dynamic = "force-dynamic";
+// Edge Runtime: 스트리밍 중에는 타임아웃 없음 (무료 플랜 OK)
+export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   const { raw_input, image } = await req.json();
@@ -40,7 +39,10 @@ export async function POST(req: NextRequest) {
             ? existingKeywords.join(", ")
             : undefined;
 
-        // Stage 1: Stream Claude analysis (기존 키워드 맥락 포함)
+        // 기존 키워드 목록을 클라이언트에 전달 (저장 단계에서 사용)
+        send({ type: "existing_keywords", keywords: existingKeywords });
+
+        // Stage 1: Stream Claude analysis
         send({ type: "status", stage: 1, message: "투자 아이디어 분석 중..." });
         let accumulated = "";
         await streamAnalysis(
@@ -53,20 +55,8 @@ export async function POST(req: NextRequest) {
           existingContext
         );
 
-        // Stage 2: Parse
-        send({ type: "status", stage: 2, message: "사이드이펙트 도출 중..." });
-        const analysis = parseAnalysisResponse(accumulated);
-
-        // Stage 3: Save to DB
-        send({ type: "status", stage: 3, message: "데이터 저장 및 키워드 연결 중..." });
-        const inputText = raw_input || "[이미지 분석]";
-        const ideaId = await saveAnalysis(inputText, analysis);
-
-        // 키워드 추출 (기존 키워드 목록 전달하여 재사용 유도)
-        const kwList = await extractKeywords(accumulated, existingKeywords);
-        await saveKeywords(ideaId, kwList);
-
-        send({ type: "done", idea_id: ideaId });
+        // 분석 완료 — 원문 JSON을 클라이언트에 전달
+        send({ type: "analysis_complete", raw_json: accumulated });
         controller.close();
       } catch (err) {
         console.error("[analyze] error:", err);

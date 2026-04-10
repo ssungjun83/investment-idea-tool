@@ -8,9 +8,9 @@ import LoadingAnalysis from "./LoadingAnalysis";
 import { Sparkles, X, ImageIcon } from "lucide-react";
 
 interface PastedImage {
-  data: string;       // base64
-  media_type: string; // image/png, image/jpeg, ...
-  preview: string;    // object URL for preview
+  data: string;
+  media_type: string;
+  preview: string;
 }
 
 export default function IdeaInputForm() {
@@ -26,7 +26,6 @@ export default function IdeaInputForm() {
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Elapsed timer
   useEffect(() => {
     if (loading) {
       setElapsed(0);
@@ -39,7 +38,6 @@ export default function IdeaInputForm() {
     };
   }, [loading]);
 
-  // Cancel handler
   const handleCancel = useCallback(() => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -51,7 +49,7 @@ export default function IdeaInputForm() {
     setMessage("");
   }, []);
 
-  // ── 클립보드 붙여넣기 / 드래그&드롭 처리 ──────────────────────────
+  // ── 클립보드 / 드래그&드롭 ─────────────────────────────────────────
   function extractImageFromItems(items: DataTransferItemList) {
     for (const item of Array.from(items)) {
       if (item.type.startsWith("image/")) {
@@ -61,11 +59,7 @@ export default function IdeaInputForm() {
         reader.onload = () => {
           const result = reader.result as string;
           const base64 = result.split(",")[1];
-          setImage({
-            data: base64,
-            media_type: file.type,
-            preview: URL.createObjectURL(file),
-          });
+          setImage({ data: base64, media_type: file.type, preview: URL.createObjectURL(file) });
         };
         reader.readAsDataURL(file);
         return true;
@@ -75,16 +69,12 @@ export default function IdeaInputForm() {
   }
 
   function handlePaste(e: React.ClipboardEvent) {
-    if (e.clipboardData.items) {
-      extractImageFromItems(e.clipboardData.items);
-    }
+    if (e.clipboardData.items) extractImageFromItems(e.clipboardData.items);
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
-    if (e.dataTransfer.items) {
-      extractImageFromItems(e.dataTransfer.items);
-    }
+    if (e.dataTransfer.items) extractImageFromItems(e.dataTransfer.items);
   }
 
   function handleDragOver(e: React.DragEvent) {
@@ -96,7 +86,7 @@ export default function IdeaInputForm() {
     setImage(null);
   }
 
-  // ── 제출 ──────────────────────────────────────────────────────────
+  // ── 제출: 2단계 (Edge 스트리밍 → Serverless 저장) ────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() && !image) return;
@@ -117,6 +107,7 @@ export default function IdeaInputForm() {
         body.image = { data: image.data, media_type: image.media_type };
       }
 
+      // ── Phase 1: Edge Runtime 스트리밍 (시간 제한 없음) ──
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,12 +119,13 @@ export default function IdeaInputForm() {
         const errData = await res.json().catch(() => null);
         throw new Error(errData?.error || `서버 오류 (${res.status})`);
       }
-
       if (!res.body) throw new Error("스트림을 받을 수 없습니다.");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let rawJson = "";
+      let existingKeywords: string[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -151,31 +143,55 @@ export default function IdeaInputForm() {
             if (data.type === "status") {
               setStage(data.stage);
               setMessage(data.message);
-            } else if (data.type === "done") {
-              setLoading(false);
-              router.push(`/ideas/${data.idea_id}`);
-              return;
+            } else if (data.type === "existing_keywords") {
+              existingKeywords = data.keywords ?? [];
+            } else if (data.type === "analysis_complete") {
+              rawJson = data.raw_json;
             } else if (data.type === "error") {
               setError(data.message);
               setLoading(false);
               return;
             }
           } catch {
-            // skip malformed SSE lines
+            // skip malformed SSE
           }
         }
       }
 
-      // Stream ended without 'done' event — likely a timeout
-      if (loading) {
-        setError("서버 연결이 끊어졌습니다. 다시 시도해주세요.");
+      if (!rawJson) {
+        setError("분석 결과를 받지 못했습니다. 다시 시도해주세요.");
         setLoading(false);
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        // User cancelled — do nothing
         return;
       }
+
+      // ── Phase 2: Serverless 저장 (DB + 키워드 추출) ──
+      setStage(2);
+      setMessage("사이드이펙트 도출 및 데이터 저장 중...");
+
+      const saveRes = await fetch("/api/analyze/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          raw_input: input || "[이미지 분석]",
+          raw_json: rawJson,
+          existing_keywords: existingKeywords,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!saveRes.ok) {
+        const errData = await saveRes.json().catch(() => null);
+        throw new Error(errData?.error || "저장 실패");
+      }
+
+      const saveData = await saveRes.json();
+
+      setStage(3);
+      setMessage("완료!");
+      setLoading(false);
+      router.push(`/ideas/${saveData.idea_id}`);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
       setLoading(false);
     }
@@ -200,14 +216,7 @@ export default function IdeaInputForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* 붙여넣기 / 드래그&드롭 영역 */}
-      <div
-        ref={dropRef}
-        onPaste={handlePaste}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        className="relative"
-      >
+      <div ref={dropRef} onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver} className="relative">
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -215,8 +224,6 @@ export default function IdeaInputForm() {
           className="min-h-[180px] text-sm leading-relaxed resize-none"
           disabled={loading}
         />
-
-        {/* 이미지 없을 때 힌트 */}
         {!image && (
           <div className="absolute bottom-3 right-3 flex items-center gap-1 text-xs text-gray-300 pointer-events-none select-none">
             <ImageIcon className="h-3.5 w-3.5" />
@@ -225,15 +232,10 @@ export default function IdeaInputForm() {
         )}
       </div>
 
-      {/* 붙여넣은 이미지 미리보기 */}
       {image && (
         <div className="relative inline-block rounded-lg overflow-hidden border border-blue-200 bg-blue-50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={image.preview}
-            alt="붙여넣은 이미지"
-            className="max-h-48 max-w-full object-contain"
-          />
+          <img src={image.preview} alt="붙여넣은 이미지" className="max-h-48 max-w-full object-contain" />
           <button
             type="button"
             onClick={removeImage}
@@ -253,11 +255,7 @@ export default function IdeaInputForm() {
         </div>
       )}
 
-      <Button
-        type="submit"
-        className="w-full h-12 text-base gap-2"
-        disabled={loading || (!input.trim() && !image)}
-      >
+      <Button type="submit" className="w-full h-12 text-base gap-2" disabled={loading || (!input.trim() && !image)}>
         <Sparkles className="h-5 w-5" />
         AI 분석 시작
       </Button>
