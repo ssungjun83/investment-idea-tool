@@ -6,11 +6,11 @@ import { saveAnalysis, saveKeywords } from "@/lib/db/queries";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const { raw_input } = await req.json();
+  const { raw_input, image } = await req.json();
 
-  if (!raw_input?.trim()) {
+  if (!raw_input?.trim() && !image) {
     return new Response(
-      JSON.stringify({ error: "투자 아이디어를 입력해주세요." }),
+      JSON.stringify({ error: "투자 아이디어를 입력하거나 이미지를 첨부해주세요." }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
@@ -26,13 +26,17 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        // Stage 1: Stream Claude analysis
+        // Stage 1: Stream Claude analysis (이미지가 있으면 비전 모드)
         send({ type: "status", stage: 1, message: "투자 아이디어 분석 중..." });
         let accumulated = "";
-        await streamAnalysis(raw_input, (delta) => {
-          accumulated += delta;
-          send({ type: "delta", text: delta });
-        });
+        await streamAnalysis(
+          raw_input || "첨부된 이미지를 분석해주세요.",
+          (delta) => {
+            accumulated += delta;
+            send({ type: "delta", text: delta });
+          },
+          image ?? undefined
+        );
 
         // Stage 2: Parse
         send({ type: "status", stage: 2, message: "사이드이펙트 도출 중..." });
@@ -40,7 +44,8 @@ export async function POST(req: NextRequest) {
 
         // Stage 3: Save to DB
         send({ type: "status", stage: 3, message: "수혜 기업 저장 중..." });
-        const ideaId = await saveAnalysis(raw_input, analysis);
+        const inputText = raw_input || "[이미지 분석]";
+        const ideaId = await saveAnalysis(inputText, analysis);
 
         // Extract and save keywords
         const kwList = await extractKeywords(accumulated);

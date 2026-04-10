@@ -14,18 +14,41 @@ function getClient() {
   return new Anthropic({ apiKey });
 }
 
+interface ImageInput {
+  data: string;       // base64
+  media_type: string; // image/png, image/jpeg, image/gif, image/webp
+}
+
 export async function streamAnalysis(
   rawInput: string,
-  onDelta: (text: string) => void
+  onDelta: (text: string) => void,
+  image?: ImageInput
 ): Promise<string> {
   const client = getClient();
+
+  // 이미지가 있으면 멀티모달 메시지 구성
+  const userContent: Anthropic.MessageParam["content"] = image
+    ? [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: image.media_type as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: image.data,
+          },
+        },
+        {
+          type: "text",
+          text: buildAnalysisUserPrompt(rawInput),
+        },
+      ]
+    : buildAnalysisUserPrompt(rawInput);
+
   const stream = await client.messages.stream({
     model: "claude-sonnet-4-6",
     max_tokens: 4096,
     system: ANALYSIS_SYSTEM_PROMPT,
-    messages: [
-      { role: "user", content: buildAnalysisUserPrompt(rawInput) },
-    ],
+    messages: [{ role: "user", content: userContent }],
   });
 
   let accumulated = "";
