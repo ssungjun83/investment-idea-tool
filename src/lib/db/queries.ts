@@ -470,6 +470,18 @@ export async function getFullGraph(): Promise<CytoscapeElements> {
       ? await db.select().from(ideaKeywords).where(inArray(ideaKeywords.idea_id, ideaIds))
       : [];
 
+  // Fetch companies for these ideas
+  const companies =
+    ideaIds.length > 0
+      ? await db.select().from(stage3Companies).where(inArray(stage3Companies.idea_id, ideaIds))
+      : [];
+
+  // Fetch effects for these ideas
+  const effects =
+    ideaIds.length > 0
+      ? await db.select().from(stage2Effects).where(inArray(stage2Effects.idea_id, ideaIds))
+      : [];
+
   const nodes: CytoscapeElements["nodes"] = [
     ...allKws.map((kw) => ({
       data: {
@@ -488,6 +500,26 @@ export async function getFullGraph(): Promise<CytoscapeElements> {
         ideaDate: idea.created_at.toISOString().split("T")[0],
         ideaId: idea.id,
         size: 24,
+      },
+    })),
+    ...companies.map((co) => ({
+      data: {
+        id: `co_${co.id}`,
+        type: "company" as const,
+        label: co.ticker ? `${co.company_name} (${co.ticker})` : co.company_name,
+        ticker: co.ticker ?? undefined,
+        exchange: co.exchange ?? undefined,
+        ideaId: co.idea_id,
+        size: 18,
+      },
+    })),
+    ...effects.map((ef) => ({
+      data: {
+        id: `ef_${ef.id}`,
+        type: "effect" as const,
+        label: ef.description.length > 30 ? ef.description.slice(0, 30) + "…" : ef.description,
+        ideaId: ef.idea_id,
+        size: 16,
       },
     })),
   ];
@@ -509,6 +541,24 @@ export async function getFullGraph(): Promise<CytoscapeElements> {
         target: `kw_${link.keyword_id}`,
         edgeType: "idea-keyword" as const,
         weight: link.weight,
+      },
+    })),
+    ...companies.map((co) => ({
+      data: {
+        id: `e_co_${co.id}_idea_${co.idea_id}`,
+        source: `co_${co.id}`,
+        target: `idea_${co.idea_id}`,
+        edgeType: "idea-company" as const,
+        weight: 1,
+      },
+    })),
+    ...effects.map((ef) => ({
+      data: {
+        id: `e_ef_${ef.id}_idea_${ef.idea_id}`,
+        source: `ef_${ef.id}`,
+        target: `idea_${ef.idea_id}`,
+        edgeType: "idea-effect" as const,
+        weight: 1,
       },
     })),
   ];

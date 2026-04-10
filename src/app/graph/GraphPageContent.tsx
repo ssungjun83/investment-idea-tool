@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Network, X, ExternalLink } from "lucide-react";
+import { Network, X, ExternalLink, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,12 +18,12 @@ const GraphViewer = dynamic(() => import("@/components/GraphViewer"), {
   ),
 });
 
-const NODE_LABELS: Record<string, { label: string; color: string }> = {
-  keyword: { label: "키워드", color: "bg-emerald-100 text-emerald-700" },
-  idea: { label: "아이디어", color: "bg-blue-100 text-blue-700" },
-  company: { label: "수혜 기업", color: "bg-amber-100 text-amber-700" },
-  effect: { label: "사이드이펙트", color: "bg-violet-100 text-violet-700" },
-};
+const NODE_TYPES = [
+  { key: "keyword", label: "키워드", color: "bg-emerald-500", textColor: "text-emerald-700", bgColor: "bg-emerald-100" },
+  { key: "idea", label: "아이디어", color: "bg-blue-500", textColor: "text-blue-700", bgColor: "bg-blue-100" },
+  { key: "company", label: "수혜 기업", color: "bg-amber-500", textColor: "text-amber-700", bgColor: "bg-amber-100" },
+  { key: "effect", label: "사이드이펙트", color: "bg-violet-500", textColor: "text-violet-700", bgColor: "bg-violet-100" },
+] as const;
 
 export default function GraphPageContent() {
   const searchParams = useSearchParams();
@@ -33,6 +33,9 @@ export default function GraphPageContent() {
   const [elements, setElements] = useState<CytoscapeElements>({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<CytoscapeNodeData | null>(null);
+  const [visibleTypes, setVisibleTypes] = useState<Set<string>>(
+    new Set(["keyword", "idea", "company", "effect"])
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -50,8 +53,32 @@ export default function GraphPageContent() {
       .catch(() => setLoading(false));
   }, [keyword]);
 
-  function handleNodeClick(data: CytoscapeNodeData) {
+  const handleNodeClick = useCallback((data: CytoscapeNodeData) => {
     setSelectedNode(data);
+  }, []);
+
+  const handleNodeDoubleClick = useCallback(
+    (data: CytoscapeNodeData) => {
+      if (data.type === "keyword") {
+        router.push(`/graph?keyword=${encodeURIComponent(data.label)}`);
+        setSelectedNode(null);
+      } else if (data.type === "idea" && data.ideaId) {
+        router.push(`/ideas/${data.ideaId}`);
+      }
+    },
+    [router]
+  );
+
+  function toggleType(type: string) {
+    setVisibleTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
   }
 
   function navigateToKeyword(kw: string) {
@@ -59,10 +86,17 @@ export default function GraphPageContent() {
     setSelectedNode(null);
   }
 
+  // Count nodes per type
+  const typeCounts: Record<string, number> = {};
+  for (const n of elements.nodes) {
+    typeCounts[n.data.type] = (typeCounts[n.data.type] ?? 0) + 1;
+  }
+
   const isEmpty = !loading && elements.nodes.length === 0;
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Network className="h-6 w-6 text-blue-500" />
@@ -82,17 +116,40 @@ export default function GraphPageContent() {
             </div>
           )}
         </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-3 text-xs flex-wrap">
-          {Object.entries(NODE_LABELS).map(([type, { label, color }]) => (
-            <span key={type} className={`px-2 py-1 rounded-full font-medium ${color}`}>
-              {label}
-            </span>
-          ))}
-        </div>
       </div>
 
+      {/* Filter controls + Legend */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 mr-1">
+          <Filter className="h-3.5 w-3.5" />
+          <span className="font-medium">필터:</span>
+        </div>
+        {NODE_TYPES.map(({ key, label, color, textColor, bgColor }) => {
+          const active = visibleTypes.has(key);
+          const count = typeCounts[key] ?? 0;
+          return (
+            <button
+              key={key}
+              onClick={() => toggleType(key)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                active
+                  ? `${bgColor} ${textColor}`
+                  : "bg-gray-100 text-gray-400 line-through"
+              }`}
+            >
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${active ? color : "bg-gray-300"}`} />
+              {label}
+              {count > 0 && (
+                <span className={`ml-0.5 ${active ? "opacity-60" : "opacity-40"}`}>
+                  ({count})
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Graph area */}
       <div className="relative">
         {loading ? (
           <div className="h-[600px] flex items-center justify-center bg-gray-50 rounded-lg border">
@@ -109,6 +166,8 @@ export default function GraphPageContent() {
           <GraphViewer
             elements={elements}
             onNodeClick={handleNodeClick}
+            onNodeDoubleClick={handleNodeDoubleClick}
+            visibleTypes={visibleTypes}
             height="600px"
           />
         )}
@@ -122,10 +181,12 @@ export default function GraphPageContent() {
                   <div>
                     <div
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mb-1 ${
-                        NODE_LABELS[selectedNode.type]?.color ?? "bg-gray-100 text-gray-600"
+                        NODE_TYPES.find((t) => t.key === selectedNode.type)
+                          ? `${NODE_TYPES.find((t) => t.key === selectedNode.type)!.bgColor} ${NODE_TYPES.find((t) => t.key === selectedNode.type)!.textColor}`
+                          : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {NODE_LABELS[selectedNode.type]?.label ?? selectedNode.type}
+                      {NODE_TYPES.find((t) => t.key === selectedNode.type)?.label ?? selectedNode.type}
                     </div>
                     <p className="font-semibold text-sm">{selectedNode.label}</p>
                   </div>
@@ -192,6 +253,23 @@ export default function GraphPageContent() {
                     )}
                   </div>
                 )}
+
+                {selectedNode.type === "effect" && (
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <p>{selectedNode.label}</p>
+                    {selectedNode.ideaId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs gap-1 mt-2"
+                        onClick={() => router.push(`/ideas/${selectedNode.ideaId}`)}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        관련 아이디어 보기
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -199,7 +277,7 @@ export default function GraphPageContent() {
       </div>
 
       <p className="text-xs text-gray-400 text-center">
-        노드를 클릭하면 상세 정보를 볼 수 있습니다. 스크롤로 줌 인/아웃, 드래그로 이동.
+        노드 클릭: 상세 정보 · 더블클릭: 키워드 중심 그래프 이동 · 스크롤: 줌 · 드래그: 이동
       </p>
     </div>
   );

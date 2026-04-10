@@ -21,6 +21,7 @@ export interface CytoscapeEdgeData {
     | "idea-keyword"
     | "keyword-keyword"
     | "idea-company"
+    | "idea-effect"
     | "keyword-company";
   weight: number;
   ideaId?: number;
