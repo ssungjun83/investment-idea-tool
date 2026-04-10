@@ -1,11 +1,14 @@
 "use client";
 
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface LoadingAnalysisProps {
   currentStage: number;
   message: string;
+  onCancel?: () => void;
+  elapsed?: number;
 }
 
 const stages = [
@@ -14,12 +17,15 @@ const stages = [
   { label: "수혜 기업 저장 중", icon: "🏢" },
 ];
 
-export default function LoadingAnalysis({ currentStage, message }: LoadingAnalysisProps) {
+export default function LoadingAnalysis({ currentStage, message, onCancel, elapsed }: LoadingAnalysisProps) {
   return (
     <div className="flex flex-col items-center gap-6 py-12">
       <div className="text-center">
         <div className="text-4xl mb-3 animate-bounce">{stages[currentStage - 1]?.icon ?? "⏳"}</div>
         <p className="text-sm text-gray-500 font-medium">{message}</p>
+        {elapsed !== undefined && (
+          <p className="text-xs text-gray-400 mt-1">{elapsed}초 경과</p>
+        )}
       </div>
 
       <div className="flex gap-6">
@@ -59,6 +65,18 @@ export default function LoadingAnalysis({ currentStage, message }: LoadingAnalys
           );
         })}
       </div>
+
+      {onCancel && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-gray-400 hover:text-red-500 mt-2"
+          onClick={onCancel}
+        >
+          <XCircle className="h-4 w-4" />
+          분석 취소
+        </Button>
+      )}
     </div>
   );
 }

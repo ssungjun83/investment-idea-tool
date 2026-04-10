@@ -3,7 +3,8 @@ import { streamAnalysis, extractKeywords } from "@/lib/ai/client";
 import { parseAnalysisResponse } from "@/lib/ai/parser";
 import { saveAnalysis, saveKeywords, getAllKeywordNames } from "@/lib/db/queries";
 
-export const maxDuration = 60;
+export const maxDuration = 300; // Vercel Pro: 5분, Free: 10초 제한
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const { raw_input, image } = await req.json();

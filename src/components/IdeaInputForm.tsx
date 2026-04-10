@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,8 +20,36 @@ export default function IdeaInputForm() {
   const [stage, setStage] = useState(1);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [elapsed, setElapsed] = useState(0);
   const router = useRouter();
   const dropRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Elapsed timer
+  useEffect(() => {
+    if (loading) {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [loading]);
+
+  // Cancel handler
+  const handleCancel = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setLoading(false);
+    setError("");
+    setStage(1);
+    setMessage("");
+  }, []);
 
   // ── 클립보드 붙여넣기 / 드래그&드롭 처리 ──────────────────────────
   function extractImageFromItems(items: DataTransferItemList) {
@@ -32,7 +60,6 @@ export default function IdeaInputForm() {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          // result = "data:image/png;base64,xxxx"
           const base64 = result.split(",")[1];
           setImage({
             data: base64,
@@ -74,6 +101,9 @@ export default function IdeaInputForm() {
     e.preventDefault();
     if (!input.trim() && !image) return;
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError("");
     setStage(1);
@@ -91,38 +121,61 @@ export default function IdeaInputForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || `서버 오류 (${res.status})`);
+      }
 
       if (!res.body) throw new Error("스트림을 받을 수 없습니다.");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
-          const data = JSON.parse(line.slice(6));
+          try {
+            const data = JSON.parse(line.slice(6));
 
-          if (data.type === "status") {
-            setStage(data.stage);
-            setMessage(data.message);
-          } else if (data.type === "done") {
-            router.push(`/ideas/${data.idea_id}`);
-            return;
-          } else if (data.type === "error") {
-            setError(data.message);
-            setLoading(false);
-            return;
+            if (data.type === "status") {
+              setStage(data.stage);
+              setMessage(data.message);
+            } else if (data.type === "done") {
+              setLoading(false);
+              router.push(`/ideas/${data.idea_id}`);
+              return;
+            } else if (data.type === "error") {
+              setError(data.message);
+              setLoading(false);
+              return;
+            }
+          } catch {
+            // skip malformed SSE lines
           }
         }
       }
+
+      // Stream ended without 'done' event — likely a timeout
+      if (loading) {
+        setError("서버 연결이 끊어졌습니다. 다시 시도해주세요.");
+        setLoading(false);
+      }
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // User cancelled — do nothing
+        return;
+      }
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
       setLoading(false);
     }
@@ -135,7 +188,14 @@ export default function IdeaInputForm() {
 - 중국의 전기차 수출 증가로 배터리 원자재 수요가 급등하고 있다`;
 
   if (loading) {
-    return <LoadingAnalysis currentStage={stage} message={message} />;
+    return (
+      <LoadingAnalysis
+        currentStage={stage}
+        message={message}
+        onCancel={handleCancel}
+        elapsed={elapsed}
+      />
+    );
   }
 
   return (
