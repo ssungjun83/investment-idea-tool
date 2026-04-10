@@ -7,7 +7,9 @@ function getDb() {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL 환경변수가 설정되지 않았습니다.");
   }
-  const sql = neon(databaseUrl);
+  const sql = neon(databaseUrl, {
+    fetchOptions: { cache: "no-store" },
+  });
   return drizzle(sql, { schema });
 }
 
