@@ -54,6 +54,14 @@ interface IndicatorData {
   description: string | null;
   yahoo_symbol: string | null;
   value_unit: string | null;
+  livePrice: {
+    current: number;
+    previousClose: number;
+    change: number;
+    changePct: number;
+    dayHigh: number;
+    dayLow: number;
+  } | null;
   latest: Snapshot | null;
   history: Snapshot[];
   priceHistory: { date: string; close: number }[];
@@ -84,9 +92,14 @@ function IndicatorCard({ indicator, onRefresh, refreshingId }: {
   const isRefreshing = refreshingId === indicator.id;
   const cat = categoryConfig[indicator.category] ?? categoryConfig["산업"];
 
-  const hasPrice = latest?.current_value != null;
-  const change = latest?.value_change ?? 0;
-  const changePct = latest?.value_change_pct ?? 0;
+  // livePrice 우선, 없으면 스냅샷 fallback
+  const lp = indicator.livePrice;
+  const currentValue = lp?.current ?? latest?.current_value ?? null;
+  const hasPrice = currentValue != null;
+  const change = lp?.change ?? latest?.value_change ?? 0;
+  const changePct = lp?.changePct ?? latest?.value_change_pct ?? 0;
+  const dayHigh = lp?.dayHigh ?? latest?.day_high ?? null;
+  const dayLow = lp?.dayLow ?? latest?.day_low ?? null;
   const isUp = change > 0;
   const isDown = change < 0;
 
@@ -118,7 +131,7 @@ function IndicatorCard({ indicator, onRefresh, refreshingId }: {
             <div className="mt-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-extrabold text-gray-900">
-                  {formatValue(latest.current_value!, indicator.value_unit)}
+                  {formatValue(currentValue!, indicator.value_unit)}
                 </span>
                 <span className="text-xs text-gray-400">{indicator.value_unit}</span>
               </div>
@@ -135,11 +148,11 @@ function IndicatorCard({ indicator, onRefresh, refreshingId }: {
                   {changePct > 0 ? "+" : ""}{changePct.toFixed(2)}%
                 </span>
               </div>
-              {latest.day_high != null && latest.day_low != null && (
+              {dayHigh != null && dayLow != null && (
                 <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-400">
-                  <span>고 {formatValue(latest.day_high)}</span>
+                  <span>고 {formatValue(dayHigh)}</span>
                   <span>/</span>
-                  <span>저 {formatValue(latest.day_low)}</span>
+                  <span>저 {formatValue(dayLow)}</span>
                 </div>
               )}
             </div>
@@ -338,9 +351,9 @@ export default function IndicatorDashboard() {
   }
 
   // 통계
-  const withPrice = indicators.filter((ind) => ind.latest?.current_value != null);
-  const upCount = withPrice.filter((ind) => (ind.latest?.value_change ?? 0) > 0).length;
-  const downCount = withPrice.filter((ind) => (ind.latest?.value_change ?? 0) < 0).length;
+  const withPrice = indicators.filter((ind) => ind.livePrice != null || ind.latest?.current_value != null);
+  const upCount = withPrice.filter((ind) => (ind.livePrice?.change ?? ind.latest?.value_change ?? 0) > 0).length;
+  const downCount = withPrice.filter((ind) => (ind.livePrice?.change ?? ind.latest?.value_change ?? 0) < 0).length;
 
   return (
     <div className="space-y-6">

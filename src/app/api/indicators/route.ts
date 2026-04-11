@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/index";
 import { indicators, indicatorSnapshots } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { fetchYahooPriceHistory } from "@/lib/indicators/price";
+import { fetchYahooPrice, fetchYahooPriceHistory } from "@/lib/indicators/price";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +42,14 @@ export async function GET() {
 
         const latest = snapshots[0] ?? null;
 
-        // Yahoo Finance 가격 히스토리 (차트용)
+        // Yahoo Finance: 실시간 가격 + 3개월 히스토리
+        let livePrice = null;
         let priceHistory: { date: string; close: number }[] = [];
         if (ind.yahoo_symbol) {
-          priceHistory = await fetchYahooPriceHistory(ind.yahoo_symbol, "3mo");
+          [livePrice, priceHistory] = await Promise.all([
+            fetchYahooPrice(ind.yahoo_symbol),
+            fetchYahooPriceHistory(ind.yahoo_symbol, "3mo"),
+          ]);
         }
 
         return {
@@ -56,6 +60,7 @@ export async function GET() {
           description: ind.description,
           yahoo_symbol: ind.yahoo_symbol,
           value_unit: ind.value_unit,
+          livePrice,
           latest,
           history: snapshots.reverse(),
           priceHistory,
