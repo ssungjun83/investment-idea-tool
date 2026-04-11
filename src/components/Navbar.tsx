@@ -10,13 +10,14 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const links = [
-    { href: "/", label: "핵심지표", icon: Activity },
+    { href: "/", label: "새 아이디어", icon: TrendingUp },
     { href: "/ideas", label: "아이디어", icon: BookOpen },
     { href: "/chat", label: "AI 채팅", icon: MessageCircle },
     { href: "/companies", label: "기업", icon: Building2 },
     { href: "/reports", label: "레포트", icon: FileText },
     { href: "/trends", label: "트렌드", icon: BarChart3 },
     { href: "/graph", label: "그래프", icon: Network },
+    { href: "/indicators", label: "핵심지표", icon: Activity },
   ];
 
   return (
