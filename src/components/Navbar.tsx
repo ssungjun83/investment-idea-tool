@@ -12,10 +12,10 @@ export default function Navbar() {
   const links = [
     { href: "/", label: "새 아이디어", icon: TrendingUp },
     { href: "/ideas", label: "목록", icon: BookOpen },
+    { href: "/chat", label: "AI 채팅", icon: MessageCircle },
     { href: "/companies", label: "기업", icon: Building2 },
     { href: "/trends", label: "트렌드", icon: BarChart3 },
     { href: "/graph", label: "그래프", icon: Network },
-    { href: "/chat", label: "AI 채팅", icon: MessageCircle },
   ];
 
   return (
