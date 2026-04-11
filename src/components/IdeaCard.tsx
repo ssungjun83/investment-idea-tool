@@ -54,7 +54,7 @@ export default function IdeaCard({ idea }: { idea: IdeaListItem }) {
       >
         {/* 왼쪽: 날짜 + 방향 아이콘 */}
         <div className={`flex flex-col items-center justify-center px-5 py-4 ${config.bg} rounded-l-lg min-w-[84px]`}>
-          <span className="text-xs font-semibold text-gray-500 tracking-wide">{date.year}</span>
+          <span className={`text-sm font-bold ${config.dateBg} tracking-wide`}>{date.year}</span>
           <span className={`text-2xl font-extrabold ${config.dateBg} leading-none mt-0.5`}>{date.month}</span>
           <Icon className={`h-5 w-5 mt-1.5 ${config.iconColor}`} />
         </div>
