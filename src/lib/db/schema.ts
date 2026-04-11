@@ -54,6 +54,7 @@ export const stage3Companies = pgTable("stage3_companies", {
   confidence: text("confidence").notNull(),
   moat_type: text("moat_type"),
   moat_reason: text("moat_reason"),
+  asset_type: text("asset_type").default("기업"),
 });
 
 export const keywords = pgTable(

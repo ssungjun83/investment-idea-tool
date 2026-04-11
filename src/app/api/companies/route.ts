@@ -22,6 +22,7 @@ export async function GET() {
         idea_date: ideas.created_at,
         moat_type: stage3Companies.moat_type,
         moat_reason: stage3Companies.moat_reason,
+        asset_type: stage3Companies.asset_type,
       })
       .from(stage3Companies)
       .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
@@ -32,6 +33,7 @@ export async function GET() {
       ticker: string | null;
       exchange: string | null;
       sector: string;
+      asset_type: string;
       score: number;
       mention_count: number;
       reasons: string[];
@@ -55,6 +57,7 @@ export async function GET() {
           ticker: row.ticker,
           exchange: row.exchange,
           sector: row.sector,
+          asset_type: row.asset_type ?? "기업",
           score: 0,
           mention_count: 0,
           reasons: [],
@@ -142,6 +145,7 @@ export async function GET() {
           ticker: co.ticker,
           exchange: co.exchange,
           sector: co.sector,
+          asset_type: co.asset_type,
           score: Math.round(co.score * 10) / 10,
           mention_count: co.mention_count,
           confidence_label: avgConf >= 2.5 ? "높음" : avgConf >= 1.5 ? "보통" : "낮음",

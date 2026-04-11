@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,7 @@ interface CompanyData {
   top_reason: string;
   moat_type: string | null;
   moat_reason: string | null;
+  asset_type: string;
   ideas: { id: number; title: string; date: string }[];
   latest_date: string;
   days_ago: number;
@@ -188,11 +189,23 @@ export default function CompaniesPage() {
                       {/* Company header */}
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-semibold">
+                          <p className="font-semibold inline-flex items-center gap-1.5">
+                            {co.asset_type === "ETF" ? (
+                              <BarChart3 className="h-4 w-4 text-violet-500 shrink-0" />
+                            ) : co.asset_type === "지수" ? (
+                              <LineChart className="h-4 w-4 text-teal-500 shrink-0" />
+                            ) : null}
                             {co.company_name}
                             {co.ticker && (
-                              <span className="ml-2 font-mono text-sm font-normal text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                              <span className="ml-1 font-mono text-sm font-normal text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
                                 {co.ticker}
+                              </span>
+                            )}
+                            {co.asset_type !== "기업" && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                co.asset_type === "ETF" ? "bg-violet-100 text-violet-700" : "bg-teal-100 text-teal-700"
+                              }`}>
+                                {co.asset_type}
                               </span>
                             )}
                           </p>

@@ -60,6 +60,7 @@ export async function saveAnalysis(
         confidence: c.confidence,
         moat_type: (c as any).moat_type ?? null,
         moat_reason: (c as any).moat_reason ?? null,
+        asset_type: (c as any).asset_type ?? "기업",
       }))
     );
   }
