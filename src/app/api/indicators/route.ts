@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/index";
 import { indicators, indicatorSnapshots } from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { fetchYahooPriceHistory } from "@/lib/indicators/price";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // 모든 활성 지표 + 최근 스냅샷들
     const allIndicators = await db
       .select()
       .from(indicators)
@@ -16,7 +16,7 @@ export async function GET() {
 
     const result = await Promise.all(
       allIndicators.map(async (ind) => {
-        // 최근 30일 스냅샷 (차트용)
+        // 최근 30일 스냅샷
         const snapshots = await db
           .select({
             id: indicatorSnapshots.id,
@@ -26,6 +26,12 @@ export async function GET() {
             summary: indicatorSnapshots.summary,
             forecast: indicatorSnapshots.forecast,
             forecast_confidence: indicatorSnapshots.forecast_confidence,
+            current_value: indicatorSnapshots.current_value,
+            previous_close: indicatorSnapshots.previous_close,
+            value_change: indicatorSnapshots.value_change,
+            value_change_pct: indicatorSnapshots.value_change_pct,
+            day_high: indicatorSnapshots.day_high,
+            day_low: indicatorSnapshots.day_low,
             news_items: indicatorSnapshots.news_items,
             user_ideas_context: indicatorSnapshots.user_ideas_context,
           })
@@ -36,14 +42,23 @@ export async function GET() {
 
         const latest = snapshots[0] ?? null;
 
+        // Yahoo Finance 가격 히스토리 (차트용)
+        let priceHistory: { date: string; close: number }[] = [];
+        if (ind.yahoo_symbol) {
+          priceHistory = await fetchYahooPriceHistory(ind.yahoo_symbol, "3mo");
+        }
+
         return {
           id: ind.id,
           name: ind.name,
           name_en: ind.name_en,
           category: ind.category,
           description: ind.description,
+          yahoo_symbol: ind.yahoo_symbol,
+          value_unit: ind.value_unit,
           latest,
-          history: snapshots.reverse(), // 오래된 것 먼저 (차트용)
+          history: snapshots.reverse(),
+          priceHistory,
         };
       })
     );

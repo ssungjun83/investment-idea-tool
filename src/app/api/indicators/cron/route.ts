@@ -4,6 +4,7 @@ import { indicators, indicatorSnapshots, ideas, stage1Idea } from "@/lib/db/sche
 import { eq, desc } from "drizzle-orm";
 import { fetchNewsForIndicator } from "@/lib/indicators/news";
 import { analyzeIndicator, buildUserContext } from "@/lib/indicators/analyze";
+import { fetchYahooPrice } from "@/lib/indicators/price";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5분 (Vercel Pro)
@@ -43,10 +44,18 @@ export async function GET(req: NextRequest) {
 
     for (const ind of activeIndicators) {
       try {
+        let priceData = null;
+        if (ind.yahoo_symbol) {
+          priceData = await fetchYahooPrice(ind.yahoo_symbol);
+        }
+
         const queries = (ind.search_queries as string[]) ?? [];
         const news = await fetchNewsForIndicator(queries, 8);
         const userContext = buildUserContext(ind.name, recentIdeas as any);
-        const analysis = await analyzeIndicator(ind.name, news, userContext);
+        const analysis = await analyzeIndicator(
+          ind.name, news, userContext,
+          priceData ? `현재 가격: ${priceData.current} ${ind.value_unit ?? ""} (전일대비 ${priceData.change > 0 ? "+" : ""}${priceData.change}, ${priceData.changePct > 0 ? "+" : ""}${priceData.changePct}%)` : null
+        );
 
         await db
           .insert(indicatorSnapshots)
@@ -58,6 +67,12 @@ export async function GET(req: NextRequest) {
             summary: analysis.summary,
             forecast: analysis.forecast,
             forecast_confidence: analysis.forecast_confidence,
+            current_value: priceData?.current ?? null,
+            previous_close: priceData?.previousClose ?? null,
+            value_change: priceData?.change ?? null,
+            value_change_pct: priceData?.changePct ?? null,
+            day_high: priceData?.dayHigh ?? null,
+            day_low: priceData?.dayLow ?? null,
             news_items: news,
             user_ideas_context: userContext,
           })
@@ -69,6 +84,12 @@ export async function GET(req: NextRequest) {
               summary: analysis.summary,
               forecast: analysis.forecast,
               forecast_confidence: analysis.forecast_confidence,
+              current_value: priceData?.current ?? null,
+              previous_close: priceData?.previousClose ?? null,
+              value_change: priceData?.change ?? null,
+              value_change_pct: priceData?.changePct ?? null,
+              day_high: priceData?.dayHigh ?? null,
+              day_low: priceData?.dayLow ?? null,
               news_items: news,
               user_ideas_context: userContext,
             },

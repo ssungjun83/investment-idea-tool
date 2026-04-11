@@ -150,6 +150,8 @@ export const indicators = pgTable("indicators", {
   category: text("category").notNull(), // 원자재, 금리, 운임, 환율, 산업
   description: text("description"),
   search_queries: jsonb("search_queries").notNull().$type<string[]>(), // Google News 검색어들
+  yahoo_symbol: text("yahoo_symbol"), // Yahoo Finance 심볼 (CL=F, ^TNX 등)
+  value_unit: text("value_unit"), // 단위 (USD/bbl, %, 포인트 등)
   is_active: integer("is_active").notNull().default(1),
   sort_order: integer("sort_order").notNull().default(0),
   created_at: timestamp("created_at").defaultNow().notNull(),
@@ -168,6 +170,12 @@ export const indicatorSnapshots = pgTable(
     summary: text("summary").notNull(),
     forecast: text("forecast").notNull(),
     forecast_confidence: text("forecast_confidence"), // 높음, 보통, 낮음
+    current_value: real("current_value"), // 실제 수치 (가격, 금리 등)
+    previous_close: real("previous_close"), // 전일 종가
+    value_change: real("value_change"), // 변동폭
+    value_change_pct: real("value_change_pct"), // 변동률 (%)
+    day_high: real("day_high"),
+    day_low: real("day_low"),
     news_items: jsonb("news_items").notNull().$type<{ title: string; source: string; url: string; date: string }[]>(),
     user_ideas_context: text("user_ideas_context"), // 반영된 사용자 아이디어 요약
     created_at: timestamp("created_at").defaultNow().notNull(),
