@@ -186,6 +186,41 @@ export const indicatorSnapshots = pgTable(
   })
 );
 
+// ─── 박살기업 스캔 ──────────────────────────────────────────────────────
+
+export const crushedScans = pgTable("crushed_scans", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull().unique(),
+  sectors: jsonb("sectors").notNull().$type<CrushedSector[]>(),
+  total_stocks: integer("total_stocks").notNull().default(0),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export interface CrushedStock {
+  ticker: string;
+  name: string;
+  exchange: string;
+  current_price: number;
+  week52_low: number;
+  week52_high: number;
+  off_from_high_pct: number; // 고점 대비 하락률
+  near_low_pct: number; // 52주 저가 대비 (낮을수록 바닥)
+  volume: number;
+  market_cap: number | null;
+  ai_comment: string;
+  recovery_potential: "높음" | "보통" | "낮음";
+}
+
+export interface CrushedSector {
+  sector: string;
+  sector_en: string;
+  etf_ticker: string;
+  etf_price: number | null;
+  etf_off_high_pct: number | null;
+  stocks: CrushedStock[];
+  ai_summary: string;
+}
+
 export const companyKeywords = pgTable(
   "company_keywords",
   {
