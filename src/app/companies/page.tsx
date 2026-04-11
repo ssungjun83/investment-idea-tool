@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,6 +66,7 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSector, setActiveSector] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetch("/api/companies")
@@ -92,9 +93,19 @@ export default function CompaniesPage() {
 
   // 필터된 기업 목록
   const filtered = useMemo(() => {
-    if (!activeSector) return companies;
-    return companies.filter((co) => co.sector === activeSector);
-  }, [companies, activeSector]);
+    let list = companies;
+    if (activeSector) list = list.filter((co) => co.sector === activeSector);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((co) =>
+        co.company_name.toLowerCase().includes(q) ||
+        (co.ticker?.toLowerCase().includes(q)) ||
+        co.sector.toLowerCase().includes(q) ||
+        co.top_reason.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [companies, activeSector, search]);
 
   const maxScore = useMemo(() => {
     const scores = companies.map((c) => Math.abs(c.score));
@@ -122,6 +133,23 @@ export default function CompaniesPage() {
           <TrendingUp className="h-3.5 w-3.5" />
           최신 × 수혜유형 × 확신도 × 해자 = 점수
         </div>
+      </div>
+
+      {/* 검색 */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="기업명, 티커, 섹터 검색..."
+          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* 섹터 필터 칩 */}

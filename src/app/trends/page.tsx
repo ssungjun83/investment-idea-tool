@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TrendingUp, Sparkles, Hash, Loader2, Lightbulb, Tag } from "lucide-react";
+import { TrendingUp, Sparkles, Hash, Loader2, Lightbulb, Tag, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -25,6 +25,7 @@ export default function TrendsPage() {
   const router = useRouter();
   const [data, setData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetch("/api/trends")
@@ -46,6 +47,14 @@ export default function TrendsPage() {
 
   if (!data) return null;
 
+  const q = search.toLowerCase();
+  const filteredTop = search.trim()
+    ? data.top_keywords.filter((kw) => kw.name.toLowerCase().includes(q) || kw.category.toLowerCase().includes(q))
+    : data.top_keywords;
+  const filteredNew = search.trim()
+    ? data.new_keywords.filter((kw) => kw.name.toLowerCase().includes(q) || kw.category.toLowerCase().includes(q))
+    : data.new_keywords;
+
   const maxCount = data.top_keywords[0]?.idea_count ?? 1;
 
   return (
@@ -54,6 +63,23 @@ export default function TrendsPage() {
       <div className="flex items-center gap-2">
         <TrendingUp className="h-6 w-6 text-purple-500" />
         <h1 className="text-2xl font-bold">트렌드 보드</h1>
+      </div>
+
+      {/* 검색 */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="키워드 검색..."
+          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -91,10 +117,10 @@ export default function TrendsPage() {
       <div>
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Hash className="h-5 w-5 text-emerald-500" />
-          키워드 랭킹 Top {data.top_keywords.length}
+          키워드 랭킹 {search ? `(${filteredTop.length}건)` : `Top ${data.top_keywords.length}`}
         </h2>
         <div className="space-y-2">
-          {data.top_keywords.map((kw, i) => (
+          {filteredTop.map((kw, i) => (
             <div
               key={kw.id}
               className="flex items-center gap-3 p-3 rounded-lg bg-white border hover:border-blue-200 cursor-pointer transition-colors"
@@ -126,14 +152,14 @@ export default function TrendsPage() {
       </div>
 
       {/* New Keywords */}
-      {data.new_keywords.length > 0 && (
+      {filteredNew.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
-            최근 등장한 키워드
+            최근 등장한 키워드 {search ? `(${filteredNew.length}건)` : ""}
           </h2>
           <div className="flex flex-wrap gap-2">
-            {data.new_keywords.map((kw) => (
+            {filteredNew.map((kw) => (
               <Badge
                 key={kw.id}
                 variant="green"
