@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search, RotateCcw, FileText, Download } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search, RotateCcw, FileText, Download, Ban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -201,7 +201,7 @@ export default function CompaniesPage() {
               <Card
                 key={co.ticker ?? co.company_name}
                 className={`hover:shadow-md transition-shadow ${
-                  isNegative ? "border-l-4 border-l-red-300 opacity-75" :
+                  isNegative ? "border-l-4 border-l-red-400 bg-red-50/30" :
                   rank <= 3 && !activeSector ? "border-l-4 border-l-red-400" : ""
                 }`}
               >
@@ -222,7 +222,7 @@ export default function CompaniesPage() {
                       {/* Company header */}
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-semibold inline-flex items-center gap-1.5">
+                          <p className={`font-semibold inline-flex items-center gap-1.5 ${isNegative ? "text-gray-400 line-through decoration-red-400" : ""}`}>
                             {co.asset_type === "ETF" ? (
                               <BarChart3 className="h-4 w-4 text-violet-500 shrink-0" />
                             ) : co.asset_type === "지수" ? (
@@ -230,7 +230,7 @@ export default function CompaniesPage() {
                             ) : null}
                             {co.company_name}
                             {co.ticker && (
-                              <span className="ml-1 font-mono text-sm font-normal text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                              <span className={`ml-1 font-mono text-sm font-normal px-2 py-0.5 rounded ${isNegative ? "text-gray-400 bg-gray-100" : "text-blue-600 bg-blue-50"}`}>
                                 {co.ticker}
                               </span>
                             )}
@@ -239,6 +239,12 @@ export default function CompaniesPage() {
                                 co.asset_type === "ETF" ? "bg-violet-100 text-violet-700" : "bg-teal-100 text-teal-700"
                               }`}>
                                 {co.asset_type}
+                              </span>
+                            )}
+                            {isNegative && (
+                              <span className="ml-1 inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-100 border border-red-300 px-2 py-0.5 rounded no-underline" style={{ textDecoration: "none" }}>
+                                <Ban className="h-3.5 w-3.5" />
+                                투자금지
                               </span>
                             )}
                           </p>
