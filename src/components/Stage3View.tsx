@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, TrendingUp, Shield } from "lucide-react";
+import { Building2, TrendingUp, Shield, BarChart3, LineChart } from "lucide-react";
 
 interface Company {
   id?: number;
@@ -13,6 +13,7 @@ interface Company {
   confidence: string;
   moat_type?: string | null;
   moat_reason?: string | null;
+  asset_type?: string | null;
 }
 
 const benefitTypeVariants: Record<string, "blue" | "green" | "amber" | "red"> = {
@@ -40,13 +41,26 @@ export default function Stage3View({ companies }: { companies: Company[] }) {
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-amber-500 shrink-0" />
+                    {co.asset_type === "ETF" ? (
+                      <BarChart3 className="h-4 w-4 text-violet-500 shrink-0" />
+                    ) : co.asset_type === "지수" ? (
+                      <LineChart className="h-4 w-4 text-teal-500 shrink-0" />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-amber-500 shrink-0" />
+                    )}
                     <div>
-                      <p className="font-semibold text-sm">
+                      <p className="font-semibold text-sm inline-flex items-center gap-1">
                         {co.company_name}
                         {co.ticker && (
-                          <span className="ml-1.5 font-mono text-xs font-normal text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                          <span className="ml-1 font-mono text-xs font-normal text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                             {co.ticker}
+                          </span>
+                        )}
+                        {co.asset_type && co.asset_type !== "기업" && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            co.asset_type === "ETF" ? "bg-violet-100 text-violet-700" : "bg-teal-100 text-teal-700"
+                          }`}>
+                            {co.asset_type}
                           </span>
                         )}
                       </p>
