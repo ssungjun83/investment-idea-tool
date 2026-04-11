@@ -108,6 +108,38 @@ export const keywordRelations = pgTable(
   })
 );
 
+export const reports = pgTable("reports", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  company_name: text("company_name").notNull(),
+  ticker: text("ticker"),
+  exchange: text("exchange"),
+  summary: text("summary").notNull(),
+  key_points: jsonb("key_points").notNull().$type<string[]>(),
+  risks: jsonb("risks").notNull().$type<string[]>(),
+  file_name: text("file_name").notNull(),
+  file_path: text("file_path").notNull(),
+  page_count: integer("page_count"),
+  source: text("source"),
+  report_date: text("report_date"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const companyReports = pgTable(
+  "company_reports",
+  {
+    company_id: integer("company_id")
+      .notNull()
+      .references(() => stage3Companies.id, { onDelete: "cascade" }),
+    report_id: integer("report_id")
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+  },
+  (t) => ({
+    pk: unique().on(t.company_id, t.report_id),
+  })
+);
+
 export const companyKeywords = pgTable(
   "company_keywords",
   {

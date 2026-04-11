@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/index";
-import { stage3Companies, ideas } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { stage3Companies, ideas, companyReports, reports } from "@/lib/db/schema";
+import { eq, sql, inArray, ilike, or } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -179,7 +179,33 @@ export async function GET() {
       })
       .sort((a, b) => b.score - a.score);
 
-    return NextResponse.json(result);
+    // 기업별 레포트 연결 (ticker 또는 company_name 매칭)
+    const allReports = await db.select({
+      id: reports.id,
+      title: reports.title,
+      ticker: reports.ticker,
+      company_name: reports.company_name,
+      file_path: reports.file_path,
+      report_date: reports.report_date,
+    }).from(reports);
+
+    const enriched = result.map((co) => {
+      const matched = allReports.filter((r) =>
+        (co.ticker && r.ticker && r.ticker.toUpperCase() === co.ticker.toUpperCase()) ||
+        r.company_name.toLowerCase() === co.company_name.toLowerCase()
+      );
+      return {
+        ...co,
+        reports: matched.map((r) => ({
+          id: r.id,
+          title: r.title,
+          file_path: r.file_path,
+          report_date: r.report_date,
+        })),
+      };
+    });
+
+    return NextResponse.json(enriched);
   } catch (err) {
     console.error("[companies] error:", err);
     return NextResponse.json({ error: "조회 실패" }, { status: 500 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search, RotateCcw } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search, RotateCcw, FileText, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ interface CompanyData {
   asset_type: string;
   turnaround_stage: string | null;
   turnaround_reason: string | null;
+  reports: { id: number; title: string; file_path: string; report_date: string | null }[];
   ideas: { id: number; title: string; date: string }[];
   latest_date: string;
   days_ago: number;
@@ -326,7 +327,7 @@ export default function CompaniesPage() {
                         <p className="text-xs text-gray-500 leading-relaxed">{co.top_reason}</p>
                       )}
 
-                      {/* Related ideas */}
+                      {/* Related ideas + reports */}
                       <div className="flex items-center gap-2 flex-wrap">
                         {co.ideas.map((idea) => (
                           <Button
@@ -339,6 +340,18 @@ export default function CompaniesPage() {
                             <ExternalLink className="h-3 w-3" />
                             {idea.title}
                           </Button>
+                        ))}
+                        {co.reports?.map((report) => (
+                          <a
+                            key={report.id}
+                            href={report.file_path}
+                            download
+                            className="inline-flex items-center gap-1 h-6 text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 rounded transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Download className="h-3 w-3" />
+                            {report.title}
+                          </a>
                         ))}
                       </div>
                     </div>
