@@ -43,14 +43,9 @@ const categoryColors: Record<string, "blue" | "green" | "amber" | "purple" | "re
   리스크: "red",
 };
 
-function relativeDate(dateStr: string): string {
-  const now = Date.now();
-  const d = new Date(dateStr).getTime();
-  const days = Math.floor((now - d) / (1000 * 60 * 60 * 24));
-  if (days === 0) return "오늘";
-  if (days === 1) return "어제";
-  if (days <= 7) return `${days}일 전`;
-  return new Date(dateStr).toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+function formatYearMonth(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
 }
 
 export default function IdeaCard({ idea }: { idea: IdeaListItem }) {
@@ -100,7 +95,7 @@ export default function IdeaCard({ idea }: { idea: IdeaListItem }) {
           <div className="text-right space-y-1">
             <div className="flex items-center gap-1 text-xs text-gray-400 justify-end">
               <Calendar className="h-3 w-3" />
-              {relativeDate(idea.created_at)}
+              {formatYearMonth(idea.created_at)}
             </div>
             {idea.company_count > 0 && (
               <div className="flex items-center gap-1 text-xs text-gray-500 justify-end">
