@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, TrendingUp, Shield, BarChart3, LineChart } from "lucide-react";
+import { Building2, TrendingUp, Shield, BarChart3, LineChart, RotateCcw } from "lucide-react";
 
 interface Company {
   id?: number;
@@ -14,6 +14,8 @@ interface Company {
   moat_type?: string | null;
   moat_reason?: string | null;
   asset_type?: string | null;
+  turnaround_stage?: string | null;
+  turnaround_reason?: string | null;
 }
 
 const benefitTypeVariants: Record<string, "blue" | "green" | "amber" | "red"> = {
@@ -92,6 +94,19 @@ export default function Stage3View({ companies }: { companies: Company[] }) {
                     >
                       {co.moat_type === "넓음" && <Shield className="h-3 w-3" />}
                       {co.moat_type === "넓음" ? "Wide Moat" : co.moat_type === "보통" ? "Narrow Moat" : "No Moat"}
+                    </span>
+                  )}
+                  {co.turnaround_stage && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-flex items-center gap-1 ${
+                        co.turnaround_stage === "역발상"
+                          ? "text-orange-700 bg-orange-50 border-orange-300"
+                          : "text-cyan-700 bg-cyan-50 border-cyan-300"
+                      }`}
+                      title={co.turnaround_reason ?? ""}
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {co.turnaround_stage === "역발상" ? "Turnaround" : "Recovery"}
                     </span>
                   )}
                 </div>

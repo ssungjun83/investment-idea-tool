@@ -61,6 +61,8 @@ export async function saveAnalysis(
         moat_type: (c as any).moat_type ?? null,
         moat_reason: (c as any).moat_reason ?? null,
         asset_type: (c as any).asset_type ?? "기업",
+        turnaround_stage: (c as any).turnaround_stage ?? null,
+        turnaround_reason: (c as any).turnaround_reason ?? null,
       }))
     );
   }

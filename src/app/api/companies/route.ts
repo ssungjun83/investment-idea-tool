@@ -23,6 +23,8 @@ export async function GET() {
         moat_type: stage3Companies.moat_type,
         moat_reason: stage3Companies.moat_reason,
         asset_type: stage3Companies.asset_type,
+        turnaround_stage: stage3Companies.turnaround_stage,
+        turnaround_reason: stage3Companies.turnaround_reason,
       })
       .from(stage3Companies)
       .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
@@ -41,6 +43,8 @@ export async function GET() {
       confidences: string[];
       moat_types: string[];
       moat_reasons: string[];
+      turnaround_stages: string[];
+      turnaround_reasons: string[];
       ideas: { id: number; title: string; date: string }[];
       latest_date: Date;
     }>();
@@ -65,6 +69,8 @@ export async function GET() {
           confidences: [],
           moat_types: [],
           moat_reasons: [],
+          turnaround_stages: [],
+          turnaround_reasons: [],
           ideas: [],
           latest_date: new Date(0),
         });
@@ -97,7 +103,12 @@ export async function GET() {
         row.moat_type === "보통" ? 1.3 :
         row.moat_type === "좁음" ? 0.8 : 1;
 
-      const mentionScore = recencyWeight * benefitWeight * confidenceWeight * moatWeight;
+      // 5. 턴어라운드 가점: 바닥에서 반등 잠재력이 큰 기업
+      const turnaroundWeight =
+        row.turnaround_stage === "역발상" ? 2.5 :
+        row.turnaround_stage === "회복초기" ? 1.8 : 1;
+
+      const mentionScore = recencyWeight * benefitWeight * confidenceWeight * moatWeight * turnaroundWeight;
       co.score += mentionScore;
       co.mention_count++;
       co.benefit_types.add(row.benefit_type);
@@ -105,6 +116,10 @@ export async function GET() {
       if (row.moat_type) co.moat_types.push(row.moat_type);
       if (row.moat_reason && !co.moat_reasons.includes(row.moat_reason)) {
         co.moat_reasons.push(row.moat_reason);
+      }
+      if (row.turnaround_stage) co.turnaround_stages.push(row.turnaround_stage);
+      if (row.turnaround_reason && !co.turnaround_reasons.includes(row.turnaround_reason)) {
+        co.turnaround_reasons.push(row.turnaround_reason);
       }
 
       if (row.reason && !co.reasons.includes(row.reason)) {
@@ -153,6 +168,10 @@ export async function GET() {
           top_reason: co.reasons[co.reasons.length - 1] ?? "",
           moat_type: bestMoat,
           moat_reason: co.moat_reasons[0] ?? null,
+          turnaround_stage: co.turnaround_stages.includes("역발상") ? "역발상"
+            : co.turnaround_stages.includes("회복초기") ? "회복초기"
+            : null,
+          turnaround_reason: co.turnaround_reasons[0] ?? null,
           ideas: co.ideas.sort((a, b) => b.date.localeCompare(a.date)),
           latest_date: co.latest_date.toISOString().split("T")[0],
           days_ago: Math.floor((now - co.latest_date.getTime()) / (1000 * 60 * 60 * 24)),

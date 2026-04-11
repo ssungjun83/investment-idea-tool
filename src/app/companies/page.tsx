@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield, BarChart3, LineChart, Search, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,8 @@ interface CompanyData {
   moat_type: string | null;
   moat_reason: string | null;
   asset_type: string;
+  turnaround_stage: string | null;
+  turnaround_reason: string | null;
   ideas: { id: number; title: string; date: string }[];
   latest_date: string;
   days_ago: number;
@@ -131,7 +133,7 @@ export default function CompaniesPage() {
         </div>
         <div className="text-xs text-gray-400 flex items-center gap-1">
           <TrendingUp className="h-3.5 w-3.5" />
-          최신 × 수혜유형 × 확신도 × 해자 = 점수
+          최신 × 수혜유형 × 확신도 × 해자 × 턴어라운드 = 점수
         </div>
       </div>
 
@@ -279,6 +281,19 @@ export default function CompaniesPage() {
                               >
                                 {moatConfig[co.moat_type as keyof typeof moatConfig].icon && <Shield className="h-3 w-3" />}
                                 {moatConfig[co.moat_type as keyof typeof moatConfig].label}
+                              </span>
+                            )}
+                            {co.turnaround_stage && (
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-flex items-center gap-1 ${
+                                  co.turnaround_stage === "역발상"
+                                    ? "text-orange-700 bg-orange-50 border-orange-300 animate-pulse"
+                                    : "text-cyan-700 bg-cyan-50 border-cyan-300"
+                                }`}
+                                title={co.turnaround_reason ?? ""}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                {co.turnaround_stage === "역발상" ? "Turnaround" : "Recovery"}
                               </span>
                             )}
                           </div>
