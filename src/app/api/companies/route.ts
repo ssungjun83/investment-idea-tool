@@ -25,6 +25,7 @@ export async function GET() {
         asset_type: stage3Companies.asset_type,
         turnaround_stage: stage3Companies.turnaround_stage,
         turnaround_reason: stage3Companies.turnaround_reason,
+        name_ko: stage3Companies.name_ko,
       })
       .from(stage3Companies)
       .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
@@ -45,6 +46,7 @@ export async function GET() {
       moat_reasons: string[];
       turnaround_stages: string[];
       turnaround_reasons: string[];
+      name_ko_set: Set<string>;
       ideas: { id: number; title: string; date: string }[];
       latest_date: Date;
     }>();
@@ -71,6 +73,7 @@ export async function GET() {
           moat_reasons: [],
           turnaround_stages: [],
           turnaround_reasons: [],
+          name_ko_set: new Set(),
           ideas: [],
           latest_date: new Date(0),
         });
@@ -121,6 +124,7 @@ export async function GET() {
       if (row.turnaround_reason && !co.turnaround_reasons.includes(row.turnaround_reason)) {
         co.turnaround_reasons.push(row.turnaround_reason);
       }
+      if (row.name_ko) co.name_ko_set.add(row.name_ko);
 
       if (row.reason && !co.reasons.includes(row.reason)) {
         co.reasons.push(row.reason);
@@ -172,6 +176,7 @@ export async function GET() {
             : co.turnaround_stages.includes("회복초기") ? "회복초기"
             : null,
           turnaround_reason: co.turnaround_reasons[0] ?? null,
+          name_ko: Array.from(co.name_ko_set).join(", ") || null,
           ideas: co.ideas.sort((a, b) => b.date.localeCompare(a.date)),
           latest_date: co.latest_date.toISOString().split("T")[0],
           days_ago: Math.floor((now - co.latest_date.getTime()) / (1000 * 60 * 60 * 24)),

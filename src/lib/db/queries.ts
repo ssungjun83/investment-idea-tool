@@ -63,6 +63,7 @@ export async function saveAnalysis(
         asset_type: (c as any).asset_type ?? "기업",
         turnaround_stage: (c as any).turnaround_stage ?? null,
         turnaround_reason: (c as any).turnaround_reason ?? null,
+        name_ko: (c as any).name_ko ?? null,
       }))
     );
   }

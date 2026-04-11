@@ -57,6 +57,7 @@ export const stage3Companies = pgTable("stage3_companies", {
   asset_type: text("asset_type").default("기업"),
   turnaround_stage: text("turnaround_stage"),
   turnaround_reason: text("turnaround_reason"),
+  name_ko: text("name_ko"),
 });
 
 export const keywords = pgTable(

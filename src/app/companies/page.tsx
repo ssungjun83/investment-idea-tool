@@ -22,6 +22,7 @@ interface CompanyData {
   asset_type: string;
   turnaround_stage: string | null;
   turnaround_reason: string | null;
+  name_ko: string | null;
   reports: { id: number; title: string; file_path: string; report_date: string | null }[];
   ideas: { id: number; title: string; date: string }[];
   latest_date: string;
@@ -104,7 +105,8 @@ export default function CompaniesPage() {
         co.company_name.toLowerCase().includes(q) ||
         (co.ticker?.toLowerCase().includes(q)) ||
         co.sector.toLowerCase().includes(q) ||
-        co.top_reason.toLowerCase().includes(q)
+        co.top_reason.toLowerCase().includes(q) ||
+        (co.name_ko?.toLowerCase().includes(q))
       );
     }
     return list;
