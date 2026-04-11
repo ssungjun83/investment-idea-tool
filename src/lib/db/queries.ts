@@ -183,8 +183,10 @@ export async function listIdeas(opts: {
       title: ideas.title,
       raw_input: ideas.raw_input,
       created_at: ideas.created_at,
+      theme: stage1Idea.theme,
     })
     .from(ideas)
+    .leftJoin(stage1Idea, eq(stage1Idea.idea_id, ideas.id))
     .$dynamic();
 
   if (opts.q) {
@@ -235,6 +237,7 @@ export async function listIdeas(opts: {
       return {
         ...row,
         created_at: row.created_at.toISOString(),
+        theme: row.theme ?? null,
         keywords: kws.map((k) => k.name),
         company_count: countRow?.count ?? 0,
       };

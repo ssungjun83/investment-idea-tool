@@ -56,6 +56,7 @@ export interface IdeaListItem {
   title: string;
   raw_input: string;
   created_at: string;
+  theme: string | null;
   keywords: string[];
   company_count: number;
 }
