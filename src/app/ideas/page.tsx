@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import IdeaCard from "@/components/IdeaCard";
-import { BookOpen, Search, Loader2, X } from "lucide-react";
+import { BookOpen, Search, Loader2, X, Plus } from "lucide-react";
+import Link from "next/link";
 import type { IdeaListItem } from "@/types/analysis";
 
 function IdeasContent() {
@@ -90,9 +91,18 @@ function IdeasContent() {
 export default function IdeasPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <BookOpen className="h-6 w-6 text-blue-500" />
-        <h1 className="text-2xl font-bold">아이디어 목록</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-6 w-6 text-blue-500" />
+          <h1 className="text-2xl font-bold">아이디어 목록</h1>
+        </div>
+        <Link
+          href="/ideas/new"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          새 아이디어
+        </Link>
       </div>
       <Suspense>
         <IdeasContent />

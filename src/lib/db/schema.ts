@@ -141,6 +141,43 @@ export const companyReports = pgTable(
   })
 );
 
+// ─── 핵심지표 모니터링 ─────────────────────────────────────────────────────
+
+export const indicators = pgTable("indicators", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  name_en: text("name_en"),
+  category: text("category").notNull(), // 원자재, 금리, 운임, 환율, 산업
+  description: text("description"),
+  search_queries: jsonb("search_queries").notNull().$type<string[]>(), // Google News 검색어들
+  is_active: integer("is_active").notNull().default(1),
+  sort_order: integer("sort_order").notNull().default(0),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const indicatorSnapshots = pgTable(
+  "indicator_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    indicator_id: integer("indicator_id")
+      .notNull()
+      .references(() => indicators.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // YYYY-MM-DD
+    direction: text("direction").notNull(), // up, down, neutral
+    sentiment_score: integer("sentiment_score").notNull(), // -100 ~ 100
+    summary: text("summary").notNull(),
+    forecast: text("forecast").notNull(),
+    forecast_confidence: text("forecast_confidence"), // 높음, 보통, 낮음
+    news_items: jsonb("news_items").notNull().$type<{ title: string; source: string; url: string; date: string }[]>(),
+    user_ideas_context: text("user_ideas_context"), // 반영된 사용자 아이디어 요약
+    created_at: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqDate: unique().on(t.indicator_id, t.date),
+    indicatorIdx: index("snapshot_indicator_idx").on(t.indicator_id),
+  })
+);
+
 export const companyKeywords = pgTable(
   "company_keywords",
   {

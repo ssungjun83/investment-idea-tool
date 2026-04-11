@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingUp, BookOpen, Network, Building2, MessageCircle, BarChart3, FileText } from "lucide-react";
+import { TrendingUp, BookOpen, Network, Building2, MessageCircle, BarChart3, FileText, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchBar from "./SearchBar";
 
@@ -10,8 +10,8 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const links = [
-    { href: "/", label: "새 아이디어", icon: TrendingUp },
-    { href: "/ideas", label: "목록", icon: BookOpen },
+    { href: "/", label: "핵심지표", icon: Activity },
+    { href: "/ideas", label: "아이디어", icon: BookOpen },
     { href: "/chat", label: "AI 채팅", icon: MessageCircle },
     { href: "/companies", label: "기업", icon: Building2 },
     { href: "/reports", label: "레포트", icon: FileText },
