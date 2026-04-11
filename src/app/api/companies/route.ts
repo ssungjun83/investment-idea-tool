@@ -20,6 +20,8 @@ export async function GET() {
         idea_id: stage3Companies.idea_id,
         idea_title: ideas.title,
         idea_date: ideas.created_at,
+        moat_type: stage3Companies.moat_type,
+        moat_reason: stage3Companies.moat_reason,
       })
       .from(stage3Companies)
       .innerJoin(ideas, eq(ideas.id, stage3Companies.idea_id));
@@ -35,6 +37,8 @@ export async function GET() {
       reasons: string[];
       benefit_types: Set<string>;
       confidences: string[];
+      moat_types: string[];
+      moat_reasons: string[];
       ideas: { id: number; title: string; date: string }[];
       latest_date: Date;
     }>();
@@ -56,6 +60,8 @@ export async function GET() {
           reasons: [],
           benefit_types: new Set(),
           confidences: [],
+          moat_types: [],
+          moat_reasons: [],
           ideas: [],
           latest_date: new Date(0),
         });
@@ -82,11 +88,21 @@ export async function GET() {
         row.confidence === "보통" ? 1.5 :
         row.confidence === "낮음" ? 0.5 : 1;
 
-      const mentionScore = recencyWeight * benefitWeight * confidenceWeight;
+      // 4. 경제적 해자 가점: 넓은 해자 기업은 투자 매력도 상승
+      const moatWeight =
+        row.moat_type === "넓음" ? 2 :
+        row.moat_type === "보통" ? 1.3 :
+        row.moat_type === "좁음" ? 0.8 : 1;
+
+      const mentionScore = recencyWeight * benefitWeight * confidenceWeight * moatWeight;
       co.score += mentionScore;
       co.mention_count++;
       co.benefit_types.add(row.benefit_type);
       co.confidences.push(row.confidence);
+      if (row.moat_type) co.moat_types.push(row.moat_type);
+      if (row.moat_reason && !co.moat_reasons.includes(row.moat_reason)) {
+        co.moat_reasons.push(row.moat_reason);
+      }
 
       if (row.reason && !co.reasons.includes(row.reason)) {
         co.reasons.push(row.reason);
@@ -113,6 +129,14 @@ export async function GET() {
         const avgConf = co.confidences.reduce((sum, c) =>
           sum + (c === "높음" ? 3 : c === "보통" ? 2 : 1), 0) / co.confidences.length;
 
+        // 대표 해자 등급 (가장 높은 것)
+        const moatOrder = { "넓음": 3, "보통": 2, "좁음": 1 };
+        const bestMoat = co.moat_types.length > 0
+          ? co.moat_types.reduce((best, m) =>
+              (moatOrder[m as keyof typeof moatOrder] ?? 0) > (moatOrder[best as keyof typeof moatOrder] ?? 0) ? m : best
+            )
+          : null;
+
         return {
           company_name: co.company_name,
           ticker: co.ticker,
@@ -123,6 +147,8 @@ export async function GET() {
           confidence_label: avgConf >= 2.5 ? "높음" : avgConf >= 1.5 ? "보통" : "낮음",
           benefit_types: Array.from(co.benefit_types).join(", "),
           top_reason: co.reasons[co.reasons.length - 1] ?? "",
+          moat_type: bestMoat,
+          moat_reason: co.moat_reasons[0] ?? null,
           ideas: co.ideas.sort((a, b) => b.date.localeCompare(a.date)),
           latest_date: co.latest_date.toISOString().split("T")[0],
           days_ago: Math.floor((now - co.latest_date.getTime()) / (1000 * 60 * 60 * 24)),

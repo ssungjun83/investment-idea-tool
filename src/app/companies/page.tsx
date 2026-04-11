@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Flame, Clock, TrendingUp, X, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,10 +17,18 @@ interface CompanyData {
   confidence_label: string;
   benefit_types: string;
   top_reason: string;
+  moat_type: string | null;
+  moat_reason: string | null;
   ideas: { id: number; title: string; date: string }[];
   latest_date: string;
   days_ago: number;
 }
+
+const moatConfig = {
+  넓음: { label: "Wide Moat", color: "text-amber-600 bg-amber-50 border-amber-200", icon: true },
+  보통: { label: "Narrow Moat", color: "text-sky-600 bg-sky-50 border-sky-200", icon: false },
+  좁음: { label: "No Moat", color: "text-gray-400 bg-gray-50 border-gray-200", icon: false },
+};
 
 const confidenceColors = {
   높음: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -111,7 +119,7 @@ export default function CompaniesPage() {
         </div>
         <div className="text-xs text-gray-400 flex items-center gap-1">
           <TrendingUp className="h-3.5 w-3.5" />
-          최신 + 직접수혜 + 높은 확신도 = 높은 점수
+          최신 × 수혜유형 × 확신도 × 해자 = 점수
         </div>
       </div>
 
@@ -221,6 +229,17 @@ export default function CompaniesPage() {
                             >
                               확신도: {co.confidence_label}
                             </span>
+                            {co.moat_type && moatConfig[co.moat_type as keyof typeof moatConfig] && (
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-flex items-center gap-1 ${
+                                  moatConfig[co.moat_type as keyof typeof moatConfig].color
+                                }`}
+                                title={co.moat_reason ?? ""}
+                              >
+                                {moatConfig[co.moat_type as keyof typeof moatConfig].icon && <Shield className="h-3 w-3" />}
+                                {moatConfig[co.moat_type as keyof typeof moatConfig].label}
+                              </span>
+                            )}
                           </div>
                         </div>
 

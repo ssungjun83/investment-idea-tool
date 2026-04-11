@@ -52,6 +52,8 @@ export const stage3Companies = pgTable("stage3_companies", {
   reason: text("reason").notNull(),
   benefit_type: text("benefit_type").notNull(),
   confidence: text("confidence").notNull(),
+  moat_type: text("moat_type"),
+  moat_reason: text("moat_reason"),
 });
 
 export const keywords = pgTable(

@@ -58,6 +58,8 @@ export async function saveAnalysis(
         reason: c.reason,
         benefit_type: c.benefit_type,
         confidence: c.confidence,
+        moat_type: (c as any).moat_type ?? null,
+        moat_reason: (c as any).moat_reason ?? null,
       }))
     );
   }

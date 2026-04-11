@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, TrendingUp } from "lucide-react";
+import { Building2, TrendingUp, Shield } from "lucide-react";
 
 interface Company {
   id?: number;
@@ -11,6 +11,8 @@ interface Company {
   reason: string;
   benefit_type: string;
   confidence: string;
+  moat_type?: string | null;
+  moat_reason?: string | null;
 }
 
 const benefitTypeVariants: Record<string, "blue" | "green" | "amber" | "red"> = {
@@ -65,6 +67,19 @@ export default function Stage3View({ companies }: { companies: Company[] }) {
                     {co.benefit_type}
                   </Badge>
                   <Badge variant="gray">{co.sector}</Badge>
+                  {co.moat_type && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border font-medium inline-flex items-center gap-1 ${
+                        co.moat_type === "넓음" ? "text-amber-600 bg-amber-50 border-amber-200" :
+                        co.moat_type === "보통" ? "text-sky-600 bg-sky-50 border-sky-200" :
+                        "text-gray-400 bg-gray-50 border-gray-200"
+                      }`}
+                      title={co.moat_reason ?? ""}
+                    >
+                      {co.moat_type === "넓음" && <Shield className="h-3 w-3" />}
+                      {co.moat_type === "넓음" ? "Wide Moat" : co.moat_type === "보통" ? "Narrow Moat" : "No Moat"}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-start gap-1.5">
